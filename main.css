@@ -49,9 +49,10 @@ a:hover {
 }
 
 .page {
-  width: 70%;
+  width: 65%;
   text-align: center;
   margin: 90px auto;
+  overflow: visible;
 }
 
 .project p {
@@ -77,6 +78,10 @@ a:hover {
   border-top: 3px;
 }
 
+ul {
+  margin-left: -40px;
+}
+
 .project:hover {
   background-color: #164021;
 }
@@ -87,6 +92,7 @@ h2 {
 
 hr {
   border: 2px solid #43BF63;
+  margin: 0px auto;
   margin-bottom: -25px;
   margin-top: -4px;
 }
