@@ -1,4 +1,3 @@
-/* Main Primary color */
 @import url("https://fonts.googleapis.com/css?family=B612+Mono");
 header {
   width: 100%;
@@ -51,7 +50,6 @@ a:hover {
 
 .page {
   width: 70%;
-  height: 100%;
   text-align: center;
   margin: 90px auto;
 }
@@ -68,6 +66,7 @@ a:hover {
   border: 3px solid #5AFF84;
   float: left;
   margin-right: 30px;
+  margin-top: 10px;
 }
 
 .project {

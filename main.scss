@@ -1,4 +1,4 @@
-$color-primary-0 : #43BF63;	/* Main Primary color */
+$color-primary-0 : #43BF63;
 $color-primary-1 : #2D7F42;
 $color-primary-2 : #5AFF84;
 $color-primary-3 : #164021;
@@ -50,7 +50,6 @@ a:hover{
 }
 .page{
     width: 70%;
-    height: 100%;
     text-align: center;
     margin: 90px auto;
 }
@@ -65,6 +64,7 @@ a:hover{
     border: 3px solid $color-primary-2;
     float: left;
     margin-right: 30px;
+    margin-top: 10px;
 }
 .project{
     list-style-type: none;
