@@ -110,20 +110,17 @@ body {
   font-family: "Patua One", cursive;
   color: #51E576;
   width: 100%;
-  height: 100%;
   margin: 0px;
   padding: 0px;
+  margin-top: 60px;
   background: #246534;
-  position: relative;
   padding-bottom: 30px;
-}
-
-.wrapper {
-  min-height: 100vh;
 }
 
 .footer {
   width: 100%;
+  position: fixed;
+  bottom: 0px;
   height: 30px;
   border-top: 5px solid #43BF63;
   background: #164021;
