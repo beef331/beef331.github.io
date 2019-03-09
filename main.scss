@@ -5,6 +5,7 @@ $color-primary-3 : #164021;
 $color-primary-4 : #51E576;
 $color-primary-5 : #246534;
 @import url('https://fonts.googleapis.com/css?family=B612+Mono');
+@import url('https://fonts.googleapis.com/css?family=Patua+One');
 
 header{
     width: 100%;
@@ -15,6 +16,7 @@ header{
     margin:0;
     padding: 0;
     line-height: 60px;
+    font-family: 'Patua One', cursive;
 }
 .navbar{
     height: 100%;
@@ -56,6 +58,8 @@ a:hover{
 }
 .project p{
     text-align: left;
+    font-family: 'B612 Mono', monospace;
+
 }
 .project img{
     height: auto; 
@@ -91,7 +95,7 @@ hr{
 
 }
 body{
-    font-family: 'B612 Mono', monospace;
+    font-family: 'Patua One', cursive;
     color:$color-primary-4;
     width: 100%;
     background: $color-primary-5;
