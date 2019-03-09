@@ -17,7 +17,6 @@ header{
     left: 0;
     margin:0;
     padding: 0;
-    line-height: 60px;
     font-family: 'Patua One', cursive;
 }
 .navbar{
@@ -28,12 +27,12 @@ header{
 }
 .navbar ul{
     list-style-type: none;
+    width: 100%;
     font-size: 24px;
     margin: 0;
     padding: 0;
     margin-left: 30px;
-    margin-right: 30px;
-
+    display: inline-block;
 }
 a{
     color: $color-primary-4;
@@ -42,15 +41,19 @@ a{
 a:hover{
     color: $color-primary-2;
 }
+.navbar a:hover{
+    color: $color-primary-1;
+}
 .navbar li{
-    float: left;
+    display: inline-table;
+    height: 100%;
 }
 .navbar .rightSide{
-    float: right !important;
-}
-.navbar li + li{
-    margin-left: 25px;
-    margin-right: 25px;
+    float: right;
+    margin-right: 30px;
+    padding-right: 30px;
+    font-size: 30px;
+    margin-top: ($top-nav-height/4);
 }
 .page{
     width: 65%;
@@ -106,19 +109,28 @@ body{
     width: 100%;
     margin: 0px;
     padding: 0px;
-    margin-top: $top-nav-height;
     background: $color-primary-5;
-    padding-bottom: $footer-height;
+    overflow-y: scroll;
+    height: (#{$top-nav-height} - #{$footer-height});
 }
 .footer{
     width: 100%;
     height: $footer-height;
+    position: fixed;
+    bottom: 0px;
     border-top: 5px solid $color-primary-0;
     background:$color-primary-3;
     text-align: center;
     font-size: 24px;
-    letter-spacing: 10px;
+}
+.fontAwesomeLink{
+    margin: 0 5px 0 5px;
+}
+.fontAwesomeLink:hover{
+    color : $color-primary-1;
+    width: 24px;
+    
 }
 i{
-    margin-top: 3px;
+    margin: 3 auto;
 }

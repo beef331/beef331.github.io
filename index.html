@@ -11,19 +11,22 @@
         <div class="navbar">
             <strong>
                 <ul>
-                    <li style="font-size:40px">
-                        Jason Beetham
+                    <li>
+                        <h1>Jason Beetham</h1>
+                    </li>
+                    <li>
+                        <p> Unity Developer</p>
                     </li>
                     <!--
                             <li class="rightSide">
                                 <a href="">About Me</a>
                             </li>
-                            <li class="rightSide">
-                                <a href="">Shaders</a>
-                            </li>
-                            -->
+                                                        -->
                     <li class="rightSide">
-                        <a href="">Projects</a>
+                        <a href="shaders.html">Shaders</a>
+                    </li>
+                    <li class="rightSide">
+                        <a href="index.html">Projects</a>
                     </li>
                 </ul>
             </strong>
@@ -57,24 +60,32 @@
                             easy to use. </p>
                     </li>
                 </a>
+                <hr>
+                <a href="https://jbeetham.itch.io/planetarypostage?secret=WwAWkKQdVltyaNSSr1tbQwFi3M" class="post">
+                    <li class="project">
+                        <img src="planetarypostage.png">
+                        <h2>Planetary Postage</h2>
+                        <p>A 2D physics sandbox. Launch projectiles from a Planet and watch its trajectory. All planets
+                            are procedurally textured in shader.</p>
+                    </li>
+                </a>
             </ul>
         </div>
     </div>
     <div class="footer" id="footer">
-
     </div>
 </body>
 <script>
-        let domEle = document.getElementById("footer");
-        let faKeys = Object.keys(faLinks);
-        for (let i = 0; i < faKeys.length; i++) {
-            let clickableIcon = document.createElement('a');
-            let icon = document.createElement('i');
-            clickableIcon.className = 'fontAwesomeLink';
-            clickableIcon.href = faLinks[faKeys[i]];
-            icon.className = faKeys[i];
-            clickableIcon.appendChild(icon);
-            domEle.appendChild(clickableIcon);
-        }
+    let domEle = document.getElementById("footer");
+    let faKeys = Object.keys(faLinks);
+    for (let i = 0; i < faKeys.length; i++) {
+        let clickableIcon = document.createElement('a');
+        let icon = document.createElement('i');
+        clickableIcon.className = 'fontAwesomeLink';
+        clickableIcon.href = faLinks[faKeys[i]];
+        icon.className = faKeys[i];
+        clickableIcon.appendChild(icon);
+        domEle.appendChild(clickableIcon);
+    }
 
-    </script>
+</script>

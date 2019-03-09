@@ -1,0 +1,60 @@
+<head>
+    <link rel="stylesheet" type="text/css" href="main.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <script src="FALinks.js"></script>
+    <title>Jason Beetham</title>
+</head>
+
+<body>
+    <header>
+        <div class="navbar">
+            <strong>
+                <ul>
+                    <li>
+                        <h1>Jason Beetham</h1>
+                    </li>
+                    <li>
+                        <p> Unity Developer</p>
+                    </li>
+                    <!--
+                            <li class="rightSide">
+                                <a href="">About Me</a>
+                            </li>
+                    <li class="rightSide">
+                        <a href="shaders.html">Shaders</a>
+                    </li>
+                                                                            -->
+                    <li class="rightSide">
+                        <a href="index.html">Projects</a>
+                    </li>
+                </ul>
+            </strong>
+        </div>
+    </header>
+    <div class="wrapper">
+        <div class="page">
+            <h1>Shaders</h1>
+            <hr>
+            <ul>
+            </ul>
+        </div>
+    </div>
+    <div class="footer" id="footer">
+
+    </div>
+</body>
+<script>
+    let domEle = document.getElementById("footer");
+    let faKeys = Object.keys(faLinks);
+    for (let i = 0; i < faKeys.length; i++) {
+        let clickableIcon = document.createElement('a');
+        let icon = document.createElement('i');
+        clickableIcon.className = 'fontAwesomeLink';
+        clickableIcon.href = faLinks[faKeys[i]];
+        icon.className = faKeys[i];
+        clickableIcon.appendChild(icon);
+        domEle.appendChild(clickableIcon);
+    }
+
+</script>
