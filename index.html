@@ -1,62 +1,80 @@
 <head>
     <link rel="stylesheet" type="text/css" href="main.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <script src="FALinks.js"></script>
     <title>Jason Beetham</title>
 </head>
-<header>
-    <div class="navbar">
-        <strong>
-            <ul>
-                <li style="font-size:40px">
-                    Jason Beetham
-                </li>
-                <!--
-                <li class="rightSide">
-                    <a href="">About Me</a>
-                </li>
-                <li class="rightSide">
-                    <a href="">Shaders</a>
-                </li>
-                -->
-                <li class="rightSide">
-                    <a href="">Projects</a>
-                </li>
-            </ul>
-        </strong>
-
-    </div>
-</header>
 
 <body>
-    <div class="page">
-        <h1>Projects</h1>
-        <hr>
-        <ul>
-            <a href="https://assetstore.unity.com/packages/tools/gui/pi-ui-94296" class="post">
-                <li class="project">
+    <header>
+        <div class="navbar">
+            <strong>
+                <ul>
+                    <li style="font-size:40px">
+                        Jason Beetham
+                    </li>
+                    <!--
+                            <li class="rightSide">
+                                <a href="">About Me</a>
+                            </li>
+                            <li class="rightSide">
+                                <a href="">Shaders</a>
+                            </li>
+                            -->
+                    <li class="rightSide">
+                        <a href="">Projects</a>
+                    </li>
+                </ul>
+            </strong>
+        </div>
+    </header>
+    <div class="wrapper">
+        <div class="page">
+            <h1>Projects</h1>
+            <hr>
+            <ul>
+                <a href="https://assetstore.unity.com/packages/tools/gui/pi-ui-94296" class="post">
+                    <li class="project">
 
-                    <img src="piui.png">
-                    <h2>PiUI</h2>
-                    <p> PiUI is a radial menu creation tool for the Unity Engine. It enables easy creation of
-                        screenspace
-                        radial menus. Users can choose to make menus either dynamically, or manually in editor.</p>
-                </li>
-            </a>
-            <hr>
-            <a href="https://github.com/beef331/Unity-Controller-Manager" class="post">
-                <li class="project">
-                    <h2>Controller Manager</h2>
-                    <p>Unity's out of the box controller support is terrible. Unity Controller Manager makes it easy to
-                        add 1-4 xInput controllers to any project. After adding the inputs using either provided C#
-                        applications, simply use the new Controller namespace like Unity's Input namespace. Quick and
-                        easy to use. </p>
-                </li>
-            </a>
-            <hr>
-        </ul>
+                        <img src="piui.png">
+                        <h2>PiUI</h2>
+                        <p> PiUI is a radial menu creation tool for the Unity Engine. It enables easy creation of
+                            screenspace
+                            radial menus. Users can choose to make menus either dynamically, or manually in editor.</p>
+                    </li>
+                </a>
+                <hr>
+                <a href="https://github.com/beef331/Unity-Controller-Manager" class="post">
+                    <li class="project">
+                        <img src="unity.png">
+                        <h2>Controller Manager</h2>
+                        <p>Unity's out of the box controller support is terrible. Unity Controller Manager makes it easy
+                            to
+                            add 1-4 xInput controllers to any project. After adding the inputs using either provided C#
+                            applications, simply use the new Controller namespace like Unity's Input namespace. Quick
+                            and
+                            easy to use. </p>
+                    </li>
+                </a>
+            </ul>
+        </div>
     </div>
+    <div class="footer" id="footer">
 
+    </div>
 </body>
+<script>
+        let domEle = document.getElementById("footer");
+        let faKeys = Object.keys(faLinks);
+        for (let i = 0; i < faKeys.length; i++) {
+            let clickableIcon = document.createElement('a');
+            let icon = document.createElement('i');
+            clickableIcon.className = 'fontAwesomeLink';
+            clickableIcon.href = faLinks[faKeys[i]];
+            icon.className = faKeys[i];
+            clickableIcon.appendChild(icon);
+            domEle.appendChild(clickableIcon);
+        }
 
-<footer>
-
-</footer>
+    </script>
