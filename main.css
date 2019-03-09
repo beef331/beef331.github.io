@@ -119,7 +119,7 @@ body {
 }
 
 .wrapper {
-  min-height: calc(100vh - 60px - 30px);
+  min-height: 100vh;
 }
 
 .footer {

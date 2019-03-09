@@ -113,7 +113,7 @@ body{
     padding-bottom: 30px;
 }
 .wrapper{
-    min-height: calc(100vh - #{$top-nav-height} - #{$footer-height});
+    min-height:100vh;
 }
 .footer{
     width: 100%;
