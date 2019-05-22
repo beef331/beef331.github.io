@@ -28,6 +28,10 @@ header {
   display: inline-block;
 }
 
+#pageOn {
+  color: #246534;
+}
+
 a {
   color: #51E576;
   text-decoration: none;
@@ -64,13 +68,13 @@ a:hover {
 .project p {
   text-align: left;
   font-family: "B612 Mono", monospace;
+  display: inline;
 }
 
 .project .imageHolder {
   width: 400px;
   height: 300px;
   float: left;
-  margin: 13px 30px 0px 13px;
 }
 
 .project img {
@@ -79,6 +83,7 @@ a:hover {
   max-width: 400px;
   max-height: 300px;
   float: left;
+  margin: 13px 0px;
 }
 
 .project {
@@ -143,13 +148,13 @@ body {
 
 .footer {
   width: 100%;
-  height: 30px;
+  height: 35px;
   position: fixed;
   bottom: 0px;
   border-top: 5px solid #43BF63;
   background: #164021;
   text-align: center;
-  font-size: 24px;
+  font-size: 30px;
 }
 
 h1 {
@@ -157,7 +162,7 @@ h1 {
 }
 
 .fontAwesomeLink {
-  margin: 0 5px 0 5px;
+  margin: 0 10px;
 }
 
 .fontAwesomeLink:hover {
@@ -167,6 +172,43 @@ h1 {
 
 i {
   margin: 3 auto;
+}
+
+@media screen and (max-device-width: 600px) {
+  .page {
+    width: 90%;
+    overflow: hidden;
+  }
+
+  .project p {
+    font-size: 20px;
+  }
+
+  .project {
+    text-align: center;
+  }
+
+  .footer {
+    width: 100%;
+    height: 90px;
+    font-size: 75px;
+  }
+
+  .fontAwesomeLink {
+    margin: 0px 30px;
+  }
+}
+@media screen and (max-width: 600px) {
+  .imageHolder {
+    display: none;
+    width: 0px;
+    height: 0px;
+  }
+
+  .project {
+    margin: 0px;
+    width: 100%;
+  }
 }
 
 /*# sourceMappingURL=main.css.map */

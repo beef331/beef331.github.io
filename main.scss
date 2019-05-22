@@ -5,7 +5,8 @@ $color-primary-3 : #164021;
 $color-primary-4 : #51E576;
 $color-primary-5 : #246534;
 $top-nav-height: 60px;
-$footer-height: 30px;
+$footer-height: 35px;
+$mobile-footer-height: 90px;
 @import url('https://fonts.googleapis.com/css?family=B612+Mono');
 @import url('https://fonts.googleapis.com/css?family=Patua+One');
 
@@ -33,6 +34,9 @@ header{
     padding: 0;
     margin-left: 30px;
     display: inline-block;
+}
+#pageOn{
+    color: $color-primary-5
 }
 a{
     color: $color-primary-4;
@@ -64,13 +68,12 @@ a:hover{
 .project p{
     text-align: left;
     font-family: 'B612 Mono', monospace;
-
+    display: inline;
 }
 .project .imageHolder{
     width: 400px;
     height: 300px;
     float: left;
-    margin: 13px 30px 0px 13px;
 
 }
 .project img{
@@ -79,6 +82,7 @@ a:hover{
     max-width: 400px; 
     max-height: 300px;
     float: left;
+    margin: 13px 0px;
 }
 .project{
     list-style-type: none;
@@ -140,13 +144,13 @@ body{
     border-top: 5px solid $color-primary-0;
     background:$color-primary-3;
     text-align: center;
-    font-size: 24px;
+    font-size: 30px;
 }
 h1{
     font-size: 50px;
 }
 .fontAwesomeLink{
-    margin: 0 5px 0 5px;
+    margin: 0 10px;
 }
 .fontAwesomeLink:hover{
     color : $color-primary-1;
@@ -155,4 +159,35 @@ h1{
 }
 i{
 	margin: 3 auto;
+}
+@media screen and (max-device-width:600px){
+    .page{
+        width: 90%;
+        overflow: hidden;
+    }
+    .project p{
+        font-size: 20px;
+    }
+    .project{
+        text-align: center;
+    }
+    .footer{
+        width: 100%;
+        height: $mobile-footer-height;
+        font-size: 75px;
+    }
+    .fontAwesomeLink{
+        margin: 0px 30px;
+    }
+}
+@media screen and(max-width:600px){
+    .imageHolder{
+        display: none;
+        width: 0px;
+        height: 0px;
+    }
+    .project{
+        margin: 0px;
+        width: 100%;
+    }
 }
