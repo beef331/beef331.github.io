@@ -20,12 +20,30 @@ header {
 
 .navbar ul {
   list-style-type: none;
-  width: 100%;
   font-size: 24px;
   margin: 0;
   padding: 0;
   margin-left: 30px;
-  display: inline-block;
+}
+
+.navbar li {
+  align-self: center;
+  line-height: 60px;
+  float: left;
+}
+
+.navbar a:hover {
+  color: #2D7F42;
+}
+
+.navbar .title {
+  font-size: 50px;
+}
+
+.navbar .rightSide {
+  font-size: 30px;
+  margin: 0 30px;
+  float: right;
 }
 
 #pageOn {
@@ -41,27 +59,10 @@ a:hover {
   color: #5AFF84;
 }
 
-.navbar a:hover {
-  color: #2D7F42;
-}
-
-.navbar li {
-  display: inline-table;
-  height: 100%;
-}
-
-.navbar .rightSide {
-  float: right;
-  margin-right: 30px;
-  padding-right: 30px;
-  font-size: 30px;
-  margin-top: 15px;
-}
-
 .page {
   width: 65%;
   text-align: center;
-  margin: 90px auto 0 auto;
+  margin: 60px auto 0 auto;
   overflow: visible;
 }
 
@@ -174,7 +175,7 @@ i {
   margin: 3 auto;
 }
 
-@media screen and (max-device-width: 600px) {
+@media screen and (max-device-width: 900px) {
   .page {
     width: 90%;
     overflow: hidden;
@@ -198,7 +199,24 @@ i {
     margin: 0px 30px;
   }
 }
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 900px) {
+  .page {
+    width: 90%;
+  }
+
+  .navbar li {
+    font-size: 14px;
+    top: 50%;
+  }
+
+  .navbar a {
+    font-size: 20px;
+  }
+
+  .navbar .title {
+    font-size: 40px;
+  }
+
   .imageHolder {
     display: none;
     width: 0px;
@@ -208,6 +226,7 @@ i {
   .project {
     margin: 0px;
     width: 100%;
+    height: 250px;
   }
 }
 
