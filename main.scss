@@ -76,7 +76,7 @@ a:hover{
     width: 400px;
     height: 300px;
     float: left;
-
+    padding-left: 10px;
 }
 .project img{
     height: auto; 
@@ -183,7 +183,7 @@ i{
         margin: 0px 30px;
     }
 }
-@media screen and(max-width:900px){
+@media screen and (min-device-width:1080px) and(max-width:1060px){
     .page{
         width: 90%;
     }
