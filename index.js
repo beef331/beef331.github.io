@@ -1,5 +1,4 @@
 let base = document.getElementsByClassName("project")[0];
-console.log(base.innerHTML);
 let data = {
     "posts": [
         {
@@ -46,7 +45,6 @@ for (let i = 0; i < data['posts'].length; i++) {
     href.href = post['href'];
     desc.innerText = post['desc'];
     imgurl.src = post['imgurl'];
-    console.log(post['name']);
     base.parentElement.appendChild(newElement);
     base.parentElement.appendChild(document.createElement('hr'));
 }
