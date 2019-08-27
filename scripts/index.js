@@ -28,7 +28,7 @@ let data = {
         },
         {
             "name": "Hells Divide",
-            "imgurl": "https://img.itch.zone/aW1nLzIzMjI1MTAuZ2lm/original/xR%2FMHp.gif",
+            "imgurl": "hells divide.gif",
             "href": "https://jbeetham.itch.io/hells-divide",
             "desc": "Second place game jam game. Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change dirastically."
         },
@@ -44,7 +44,7 @@ for (let i = 0; i < data['posts'].length; i++) {
     title.innerText = post['name'];
     href.href = post['href'];
     desc.innerText = post['desc'];
-    imgurl.src = post['imgurl'];
+    imgurl.src = "images/" + post['imgurl'];
     base.parentElement.appendChild(newElement);
     base.parentElement.appendChild(document.createElement('hr'));
 }
