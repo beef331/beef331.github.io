@@ -30,7 +30,7 @@ let data = {
             "name": "Hells Divide",
             "imgurl": "hells divide.gif",
             "href": "https://jbeetham.itch.io/hells-divide",
-            "desc": "Second place game jam game. Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change dirastically."
+            "desc": "Second place game jam game. Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change drastically."
         },
     ]
 };
