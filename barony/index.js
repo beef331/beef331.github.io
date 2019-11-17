@@ -309,7 +309,7 @@ let status = {
 
 function GenerateFromJson() {
 	if (parsed == undefined) {
-		parsed = JSON.parse(baseJson.replace(/\s/g, ''));
+		parsed = JSON.parse(baseJson);
 	}
 	while (editor.children.length > 0) {
 		editor.removeChild(editor.firstChild);
@@ -323,6 +323,7 @@ function GenerateFromJson() {
 		editor.appendChild(inlineNode);
 		if (x == "Items" || x == "Spells" || x == "Skills") {
 			if (key == "Items") {
+				inlineNode.childNodes[0].classList.add("underline");
 				for (let i = 0; i < parsed[x].length; i++) {
 					for (j in parsed[x][i]) {
 						inlineNode = document.createElement("div");
@@ -332,6 +333,7 @@ function GenerateFromJson() {
 						ItemProp(i, j, parsed[x][i][j], inlineNode);
 						editor.appendChild(inlineNode);
 					}
+					editor.appendChild(document.createElement("hr"));
 				}
 			}
 			if (key == "Skills") {
@@ -382,7 +384,7 @@ function AddKVPToNode(key, value, node, func = null) {
 			else	parsed[key] = event.target.value; 
 			RedrawJson();
 		};
-	} else {
+	} else if(key == "Items"){
 		keyNode.onclick = function (event) { AddNodeVal(event, key) };
 	}
 }
