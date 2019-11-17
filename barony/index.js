@@ -484,26 +484,14 @@ function CleanJson() {
 
 function CreateDropDown(parent, selection, collection) {
 	let sel = document.createElement("select");
-	if (Array.isArray(collection)) {
-		for (let i = 0; i < collection.length; i++) {
-			let newNode = document.createElement("option");
-			newNode.value = collection[i];
-			newNode.innerText = collection[i];
-			sel.appendChild(newNode);
-			if (collection[i] == selection) {
-				newNode.selected = "selected";
-			}
-		}
-	} else {
-		let keys = Object.keys(collection);
-		for (i in keys) {
-			let newNode = document.createElement("option");
-			newNode.value = keys[i];
-			newNode.innerText = keys[i];
-			sel.appendChild(newNode);
-			if (keys[i] == selection) {
-				newNode.selected = "selected";
-			}
+	collection = Array.isArray(collection) ? collection : Object.keys(collection);
+	for (let i = 0; i < collection.length; i++) {
+		let newNode = document.createElement("option");
+		newNode.value = collection[i];
+		newNode.innerText = collection[i];
+		sel.appendChild(newNode);
+		if (collection[i] == selection) {
+			newNode.selected = "selected";
 		}
 	}
 	parent.appendChild(sel);
