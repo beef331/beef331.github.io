@@ -2,7 +2,7 @@ let editor = document.getElementById("jsonEditor");
 let output = document.getElementById("output");
 let baseJson = `
 {
-"Name": "Test",
+"Name": "ID matches in classes.json",
 "ID": 0,
 "Strength": 0,
 "Constitution": 0,
@@ -448,6 +448,10 @@ function AddNodeVal(event, jsonNode) {
 function CleanJson() {
 
 	let cached = JSON.parse(JSON.stringify(parsed));
+	if(cached["ID"] >12) cached["ID"] = 12;
+	if(cached["ID"] <0) cached["ID"] = 0;
+
+
 	if ("None" in cached["Skills"])
 		delete cached["Skills"]["None"];
 	for (i in cached["Skills"]) {
