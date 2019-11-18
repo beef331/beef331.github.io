@@ -428,7 +428,7 @@ function ItemProp(itemIndex, key, value, node) {
 				parsed["Items"][itemIndex][key] = dict[event.target.value]
 			} else {
 				if (isID) {
-					delete parsed["Items"][itemIndex];
+					parsed["Items"].splice(itemIndex,1);
 					GenerateFromJson();
 				}
 			}
@@ -463,7 +463,7 @@ function CleanJson() {
 	}
 	let spells = [];
 	for (i in cached["Spells"]) {
-		if (!(cached["Spells"][i] in spells)) {
+		if (!(spells.includes(cached["Spells"][i]))) {
 			spells.push(cached["Spells"][i]);
 		}
 	}
@@ -535,14 +535,13 @@ function AddSpell(spell) {
 	inlineNode.childNodes[0].innerText = "\t";
 	let sel = CreateDropDown(inlineNode, GetSpell(spell), spells);
 	sel.oninput = function (ev) {
-		console.log(ev.target.value);
 		if (ev.target.value != "NONE") {
 			let index = parsed["Spells"].indexOf(spell);
 			if(index >=0)parsed["Spells"][index] = spells[ev.target.value];
 			else parsed["Spells"].push(spells[ev.target.value]);
 		} else {
 			let index = parsed["Spells"].indexOf(spell);
-			if (index >=0) delete parsed["Spells"][index];
+			if (index >=0) parsed["Spells"].splice(index,1);
 		}
 		GenerateFromJson();
 	};
