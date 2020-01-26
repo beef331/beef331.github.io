@@ -32,6 +32,12 @@ let data = {
             "href": "https://jbeetham.itch.io/hells-divide",
             "desc": "Second place game jam game. Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change drastically."
         },
+        {
+            "name": "Point Renderer",
+            "imgurl": "pointrenderer.png",
+            "href": "https://github.com/beef331/pointRenderer",
+            "desc": "A simple rendering method that raycasts from the camera, and then renders quads that face the camera. Quads then can have a custom texture applied to create interesting effects."
+        },
     ]
 };
 for (let i = 0; i < data['posts'].length; i++) {
