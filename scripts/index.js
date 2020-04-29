@@ -37,6 +37,11 @@ let data = {
             "imgurl": "pointrenderer.png",
             "href": "https://github.com/beef331/pointRenderer",
             "desc": "A simple rendering method that raycasts from the camera, and then renders quads that face the camera. Quads then can have a custom texture applied to create interesting effects."
+        },{
+            "name": "Cords",
+            "imgurl": "cords.gif",
+            "href": "https://jbeetham.itch.io/cords",
+            "desc": "A 2 week long game jam game, with skill and puzzle solving. Level editor and silly puzzles."
         },
     ]
 };
