@@ -16,4 +16,3 @@
 /cordsLevels/Level 16
 /cordsLevels/Level 17
 /cordsLevels/Level 18
-/cordsLevels/Level 19
