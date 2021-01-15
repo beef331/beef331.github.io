@@ -4,6 +4,14 @@ const api = new mxwidgets.WidgetApi(null);
 // Before doing anything else, request capabilities:
 api.requestCapability(mxwidgets.MatrixCapabilities.AlwaysOnScreen);
 api.requestCapability(mxwidgets.MatrixCapabilities.Screenshots);
+// Start the messaging
+api.start();
+
+// If waitForIframeLoad is false, tell the client that we're good to go
+api.sendContentLoaded();
+
+// Later, do something else (if needed)
+api.setAlwaysOnScreen(true);
 var framePtr = null;
 var excHandler = 0;
 var lastJSError = null;
