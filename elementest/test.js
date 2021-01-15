@@ -4,6 +4,12 @@ const api = new mxwidgets.WidgetApi(null);
 // Before doing anything else, request capabilities:
 api.requestCapability(mxwidgets.MatrixCapabilities.AlwaysOnScreen);
 api.requestCapability(mxwidgets.MatrixCapabilities.Screenshots);
+// Add custom action handlers (if needed)
+api.on(`action:${mxwidgets.WidgetApiToWidgetAction.UpdateVisibility}`, (ev) => {
+  ev.preventDefault(); // we're handling it, so stop the widget API from doing something.
+  console.log(ev.detail); // custom handling here
+  api.transport.reply(ev.detail, mxwidgets.IWidgetApiRequestEmptyData());
+});
 // Start the messaging
 api.start();
 
