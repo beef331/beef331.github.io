@@ -59,6 +59,7 @@ a:hover {
 }
 .rightSide a{
   color: #246534;
+  cursor: pointer;
 }
 
 #pageOn {
@@ -109,6 +110,7 @@ ul {
 .project:hover {
   background-color: #164021;
   filter: alpha(opacity=30);
+  cursor: pointer;
 }
 
 h2 {
@@ -123,14 +125,16 @@ hr {
   margin-top: -4px;
 }
 
+#body{
+  background: #246534;
+}
+
 body {
   font-family: "Patua One", cursive;
   color: #51E576;
   width: 100%;
   margin: 0px;
   padding: 0px;
-  background: #246534;
-  overflow-y: scroll;
 }
 
 .showcase video {
