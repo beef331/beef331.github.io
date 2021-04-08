@@ -209,13 +209,16 @@ proc makeShowcase(): VNode =
           video(src = entry.url, controls = "")
         hr()
 
-
+proc parseUrl() =
+  try:
+    let 
+        loc = ($window.location.href)
+        kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
+    currentPage = kind
+  except: discard
 proc makeDom(): VNode =
   document.title = "Jason Beetham"
-  let 
-    loc = ($window.location.href)
-    kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
-  currentPage = kind
+  parseUrl()
   buildhtml:
     section:
       makeHead()
