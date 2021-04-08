@@ -1,4 +1,5 @@
 include karax / prelude
+from dom import window, Location, document, decodeURI
 import std/[macros, strutils]
 type 
   Post = object
@@ -8,7 +9,7 @@ type
   ShowcaseEntry = object
     name, url: string
   Pages = enum
-    home, showcase
+    home = "#Projects", showcase = "#Showcase"
 
 
 proc initPost(name, imgurl, linkurl, desc: string): Post =
@@ -37,6 +38,38 @@ macro post(body: untyped): untyped =
 
 
 const Posts = post:
+  child:
+    name: "Linerino"
+    image: "images/linerino.png"
+    link: "https://jbeetham.itch.io/linerino"
+    desc: """
+A fun simple yet challenging puzzle game made in Nim utilizing the Nico framework.
+Play handcrafted levels, or procedural generated endless levels.
+"""
+  child:
+    name: "Hells Divide"
+    image: "images/hells divide.gif"
+    link: "https://jbeetham.itch.io/hells-divide"
+    desc: """
+Second place game jam game.
+Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change drastically.
+"""
+  child:
+    name: "Point Renderer"
+    image: "images/pointrenderer.png"
+    link: "https://github.com/beef331/pointRenderer"
+    desc: """
+A simple rendering method that raycasts from the camera, and then renders quads that face the camera.
+Quads then can have a custom texture applied to create interesting effects.
+"""
+  child:
+    name: "Cords"
+    image: "images/cords.gif"
+    link: "https://jbeetham.itch.io/cords"
+    desc: """
+A 2 week long game jam game, with skill and puzzle solving.
+Level editor and silly puzzles.
+"""
   child:
     name: "Pi Ui"
     image: "images/piui.png"
@@ -73,30 +106,6 @@ All planets are procedurally textured in shader.
 A tool for modifying Steam proton's wine prefixes.
 Enables users to quickly change wine settings, and navigate to specific prefixes.
 """
-  child:
-    name: "Hells Divide"
-    image: "images/hells divide.gif"
-    link: "https://jbeetham.itch.io/hells-divide"
-    desc: """
-Second place game jam game.
-Unique roguelike first person slasher, that has players explore a dungeon, getting upgrades on level progression that change drastically.
-"""
-  child:
-    name: "Point Renderer"
-    image: "images/pointrenderer.png"
-    link: "https://github.com/beef331/pointRenderer"
-    desc: """
-A simple rendering method that raycasts from the camera, and then renders quads that face the camera.
-Quads then can have a custom texture applied to create interesting effects.
-"""
-  child:
-    name: "Cords"
-    image: "images/cords.gif"
-    link: "https://jbeetham.itch.io/cords"
-    desc: """
-A 2 week long game jam game, with skill and puzzle solving.
-Level editor and silly puzzles.
-"""
 
 const 
   footerEntries = [
@@ -128,7 +137,7 @@ proc makeEntries(): VNode =
   result = buildHtml(ul):
     for post in Posts:
       li(class = "project"):
-        a(href = post.linkurl, class = "post"):
+        a(class = "post", href = post.linkurl):
           tdiv(class = "imageHolder"):
             img(src = post.imgurl)
           h2: text post.name
@@ -143,19 +152,17 @@ proc makeHead(): VNode =
       integrity = "sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr",
       crossorigin = "anonymous"
       )
-    link(rel = "icon", href = "Ico.png")
+    link(rel = "icon", href = "images/Ico.png")
     title():
       text "Jason Beetham"
 
-proc setToNothing(): VNode =
-  buildHtml(tdiv):
-    text "hello"
-
 proc makeNavbar: VNode =
-  template pageButton(kind: Pages, str: string): untyped  =
+  proc pageButton(kind: Pages, str: string): VNode  =
     buildHtml():
       if currentPage != kind:
-          a(onclick = proc() = currentPage = kind):
+          a(onclick = proc() = 
+            currentPage = kind
+            window.location.href = $kind):
             text str
       else:
         a(id = "pageOn"):
@@ -204,6 +211,11 @@ proc makeShowcase(): VNode =
 
 
 proc makeDom(): VNode =
+  document.title = "Jason Beetham"
+  let 
+    loc = ($window.location.href)
+    kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
+  currentPage = kind
   buildhtml:
     section:
       makeHead()
