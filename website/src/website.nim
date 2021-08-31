@@ -1,7 +1,7 @@
 include karax / prelude
 from dom import window, Location, document, decodeURI
 import std/[macros, strutils]
-type 
+type
   Post = object
     name, imgurl, linkurl, desc: string
   FooterEntry = object
@@ -80,16 +80,6 @@ It enables easy creation of screenspace radial menus.
 Users can choose to make menus either dynamically, or manually in editor.
 """
   child:
-    name: "Controller Manager"
-    image: "images/Unity.png"
-    link: "https://github.com/beef331/Unity-Controller-Manager"
-    desc: """
-Unity's out of the box controller support is(was) terrible.
-Unity Controller Manager makes it easy to add 1-4 xInput controllers to any project.
-After adding the inputs using either provided C# applications, simply use the new Controller namespace like Unity's Input namespace.
-Quick and easy to use.
-"""
-  child:
     name: "Planetary Postage"
     image: "images/planetarypostage.png"
     link: "https://jbeetham.itch.io/planetarypostage?secret=WwAWkKQdVltyaNSSr1tbQwFi3M"
@@ -98,16 +88,8 @@ A 2D physics sandbox.
 Launch projectiles from a Planet and watch its trajectory.
 All planets are procedurally textured in shader.
 """
-  child:
-    name: "Pyroton Wine Manager"
-    image: "images/pyrotonwinemanger.gif"
-    link: "https://github.com/beef331/PyrotonWineManager"
-    desc: """
-A tool for modifying Steam proton's wine prefixes.
-Enables users to quickly change wine settings, and navigate to specific prefixes.
-"""
 
-const 
+const
   footerEntries = [
     FooterEntry(
       url: "mailto://me@jasonbeetham.com",
@@ -117,10 +99,7 @@ const
       url: "https://github.com/beef331",
       icon: "fab fa-github"
     ),
-    FooterEntry(
-      url: "https://twitter.com/Beefers331",
-      icon: "fab fa-twitter"
-    )]
+    ]
   showcaseEntries = [
     ShowcaseEntry(
       name: "SpaceRace",
@@ -157,13 +136,13 @@ proc makeHead(): VNode =
       text "Jason Beetham"
 
 proc makeNavbar: VNode =
-  proc pageButton(kind: Pages, str: string): VNode  =
+  proc pageButton(kind: Pages, str: string): VNode =
     buildHtml():
       if currentPage != kind:
-          a(onclick = proc() = 
-            currentPage = kind
-            window.location.href = $kind):
-            text str
+        a(onclick = proc() =
+          currentPage = kind
+          window.location.href = $kind):
+          text str
       else:
         a(id = "pageOn"):
           text str
@@ -188,10 +167,10 @@ proc makeFooter: Vnode =
         a(class = "fontAwesomeLink", href = entry.url):
           italic(class = entry.icon)
 
-proc makeProjects: VNode = 
+proc makeProjects: VNode =
   buildhtml:
     tdiv(class = "page"):
-      h1: 
+      h1:
         text "Projects"
       hr()
       ul:
@@ -199,7 +178,7 @@ proc makeProjects: VNode =
 
 proc makeShowcase(): VNode =
   buildHtml(tdiv(class = "page")):
-    h1: 
+    h1:
       text "Showcase"
     hr()
     ul:
@@ -211,9 +190,9 @@ proc makeShowcase(): VNode =
 
 proc parseUrl() =
   try:
-    let 
-        loc = ($window.location.href)
-        kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
+    let
+      loc = ($window.location.href)
+      kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
     currentPage = kind
   except: discard
 proc makeDom(): VNode =
