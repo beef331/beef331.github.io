@@ -1,0 +1,111 @@
+<!doctypehtml><html lang=en-us><head><meta charset=utf-8><meta content="text/html; charset=utf-8"http-equiv=Content-Type><title>nicoscripter</title><style>body{background:#aaa;margin:0;padding:0;display:flex}textarea.emscripten{font-family:monospace;width:100%}div.emscripten{text-align:center}div.emscripten_border{border:1px solid #000}canvas.emscripten{border:0 none;background-color:#000;margin:0;width:50%;height:90%}.spinner{height:50px;width:50px;margin:0 auto;-webkit-animation:rotation .8s linear infinite;-moz-animation:rotation .8s linear infinite;-o-animation:rotation .8s linear infinite;animation:rotation .8s linear infinite;border-left:10px solid #0096f0;border-right:10px solid #0096f0;border-bottom:10px solid #0096f0;border-top:10px solid #6400c8;border-radius:100%;background-color:#c864fa}@-webkit-keyframes rotation{from{-webkit-transform:rotate(0)}to{-webkit-transform:rotate(360deg)}}@-moz-keyframes rotation{from{-moz-transform:rotate(0)}to{-moz-transform:rotate(360deg)}}@-o-keyframes rotation{from{-o-transform:rotate(0)}to{-o-transform:rotate(360deg)}}@keyframes rotation{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style></head><body><figure id=spinner style=overflow:visible><div class=spinner></div><center style=margin-top:.5em><strong>emscripten</strong></center></figure><div class=emscripten id=status>Downloading...</div><div class=emscripten><progress hidden id=progress max=100 value=0></progress></div><canvas class=emscripten id=canvas onclick=window.focus() oncontextmenu=event.preventDefault() onmouseenter=window.focus() tabindex=-1></canvas><script>var statusElement=document.getElementById("status"),progressElement=document.getElementById("progress"),spinnerElement=document.getElementById("spinner"),Module={preRun:[],postRun:[],canvas:function(){var e=document.getElementById("canvas");return e.addEventListener("webglcontextlost",(function(e){alert("WebGL context lost. You will need to reload the page."),e.preventDefault()}),!1),e}(),setStatus:function(e){if(Module.setStatus.last||(Module.setStatus.last={time:Date.now(),text:""}),e!==Module.setStatus.last.text){var t=e.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/),n=Date.now();t&&n-Module.setStatus.last.time<30||(Module.setStatus.last.time=n,Module.setStatus.last.text=e,t?(e=t[1],progressElement.value=100*parseInt(t[2]),progressElement.max=100*parseInt(t[4]),progressElement.hidden=!1,spinnerElement.hidden=!1):(progressElement.value=null,progressElement.max=null,progressElement.hidden=!0,e||(spinnerElement.hidden=!0)),statusElement.innerHTML=e)}},totalDependencies:0,monitorRunDependencies:function(e){this.totalDependencies=Math.max(this.totalDependencies,e),Module.setStatus(e?"Preparing... ("+(this.totalDependencies-e)+"/"+this.totalDependencies+")":"All downloads complete.")},print:function(e){console.log("stdout: "+e)},printErr:function(e){console.log("stderr: "+e)}};function updateSource(){var e=document.getElementById("source"),t=Module.ccall("reload","number",["string"],[e.value]);console.log("reload",t)}Module.setStatus("Downloading..."),window.onerror=function(){Module.setStatus("Exception thrown, see JavaScript console"),spinnerElement.style.display="none",Module.setStatus=function(e){e&&Module.printErr("[post-exception status] "+e)}}</script><script async src=nicoscripter.js></script><div class=source><textarea cols=100 id=source style=display:block;height:90%;padding:0;margin:0>
+import nicoscript
+import std/random
+const
+  ScreenSize = 128
+  TileCount = 16
+  BlockSize = ScreenSize div TileCount
+  MoveDelay = 0.1
+
+type
+  Direction = enum
+    left, right, up, down
+  Player = object
+    blocks: seq[int]
+    direction: Direction
+    isDead: bool
+
+proc init* = discard
+
+proc input(player: var Player) =
+  if btn(pcRight, 0):
+    player.direction = right
+  if btn(pcDown, 0):
+    player.direction = down
+  if btn(pcLeft, 0):
+    player.direction = left
+  if btn(pcUp, 0):
+    player.direction = up
+
+proc update(player: var Player, apple: int) =
+  let lastBlock = player.blocks[^1]
+  for x in countDown(player.blocks.high, 1):
+    player.blocks[x] = player.blocks[x - 1]
+
+  let offset =
+    case player.direction
+    of left:
+      if player.blocks[0] mod TileCount == 0:
+        player.isDead = true
+      -1
+    of right:
+      if player.blocks[0] mod TileCount == TileCount - 1:
+        player.isDead = true
+      1
+    of up:
+      if player.blocks[0] div TileCount == 0:
+        player.isDead = true
+      -TileCount
+    of down:
+      if player.blocks[0] div TileCount == TileCount - 1:
+        player.isDead = true
+      TileCount
+
+  player.blocks[0] += offset
+  for i, x in player.blocks:
+    if i > 0 and x == player.blocks[0]:
+      player.isDead = true
+      break
+
+  if player.blocks[0] == apple:
+    player.blocks.add lastBlock
+
+proc draw(p: Player) =
+  for blck in p.blocks:
+    let
+      x = blck mod TileCount * BlockSize
+      y = blck div TileCount * BlockSize
+    setColor(10)
+    rectFill(x, y, x + BlockSize - 1, y + BlockSize - 1)
+
+var
+  player* = Player(isDead: true)
+  apple* = -1
+  moveTimer* = MoveDelay
+
+proc spawnApple(player: Player): int =
+  result = rand(0 ..&lt; TileCount * TileCount)
+  while result in player.blocks:
+    result = rand(0 ..&lt; TileCount * TileCount)
+
+proc update*(dt: float32) =
+  if player.isDead:
+    player.blocks.setLen(1)
+    player.blocks[0] = rand(0 ..&lt; TileCount * TileCount)
+    player.isDead = false
+    apple = spawnApple(player)
+
+  player.input()
+  moveTimer -= dt
+  if moveTimer &lt;= 0:
+    player.update(apple)
+    moveTimer = MoveDelay
+    if player.blocks.len == TileCount * TileCount - 1:
+      player.isDead = true
+    if player.blocks[0] == apple:
+      apple = spawnApple(player)
+
+proc drawApple() =
+  let
+    x = apple mod TileCount * BlockSize
+    y = apple div TileCount * BlockSize
+  setColor(3)
+  rectFill(x, y, x + BlockSize - 1, y + BlockSize - 1)
+
+proc draw*() =
+  cls()
+  player.draw()
+  if apple >= 0:
+    drawApple()
+
+        </textarea><br><button onclick=updateSource()>RELOAD</button></div><script>document.getElementById("source").addEventListener("keydown",(function(e){e.stopImmediatePropagation()}),!0),document.getElementById("source").addEventListener("keyup",(function(e){e.stopImmediatePropagation()}),!0)</script></body></html>
