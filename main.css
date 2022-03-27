@@ -10,6 +10,7 @@ header {
   padding: 0;
   font-family: "Patua One", cursive;
   box-shadow: 0px 0px 20px black;
+  z-index: 1;
 }
 
 .navbar {
@@ -34,21 +35,11 @@ header {
 }
 
 .navbar a:hover {
-  color: #2D7F42;
+  color: #51E576;
 }
 
 .navbar .title {
   font-size: 50px;
-}
-
-.navbar .rightSide {
-  font-size: 30px;
-  margin: 0 30px;
-  float: right;
-}
-
-#pageOn {
-  color: #246534;
 }
 
 a {
@@ -58,6 +49,21 @@ a {
 
 a:hover {
   color: #5AFF84;
+}
+
+.navbar .rightSide {
+  font-size: 30px;
+  margin: 0 30px;
+  float: right;
+  color: #246534;
+}
+.rightSide a{
+  color: #246534;
+  cursor: pointer;
+}
+
+#pageOn {
+  color: #51E576;
 }
 
 .page {
@@ -88,7 +94,12 @@ a:hover {
   float: left;
   margin: 13px 0px;
 }
-
+.project a{
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .project {
   list-style-type: none;
   width: 100%;
@@ -104,6 +115,7 @@ ul {
 .project:hover {
   background-color: #164021;
   filter: alpha(opacity=30);
+  cursor: pointer;
 }
 
 h2 {
@@ -118,18 +130,21 @@ hr {
   margin-top: -4px;
 }
 
+#body{
+  background: #246534;
+}
+
 body {
   font-family: "Patua One", cursive;
   color: #51E576;
   width: 100%;
   margin: 0px;
   padding: 0px;
-  background: #246534;
-  overflow-y: scroll;
 }
 
 .showcase video {
   width: 75%;
+  z-index: 0;
 }
 
 .backVideo {
