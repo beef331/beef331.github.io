@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <title>Nim - Pointer, confusing scary and over there.</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🐳</text></svg>">
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <link rel='stylesheet' href='https://unpkg.com/normalize.css/'>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/dark.min.css">
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/gh/pietroppeter/nimib/assets/androidstudio.css'>
+  <style>
+.nb-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nb-small {
+  font-size: 0.8rem;
+}
+button.nb-small {
+  float: right;
+  padding: 2px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+section#source {
+  display:none
+}
+</style>
+  
+</head>
+<body>
+<header>
+<div class="nb-box">
+  <span><a href=".">🏡</a></span>
+  <span><code>explaination.nim</code></span>
+  <span></span>
+</div>
+<hr>
+</header><main>
+<h2>Preamble - the planning phase</h2>
+<p>If you have ever looked at library bindings for C code, you have certainly seen the scary <code>pointer</code> keyword.
+At first reading you may get nervous, scared and maybe even pee a little.
+Not to worry this writeup will hopefully explain how to gracefully walk with pointers in Nim.</p>
+<p>Imagine a world where you're presented with the following api, it could even be this world now:</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">type</span>
+  <span class="hljs-type">ProcType</span> = <span class="hljs-keyword">proc</span> (a: <span class="hljs-built_in">pointer</span>; msg: <span class="hljs-built_in">string</span>) {.nimcall.}
+<span class="hljs-keyword">var</span> myRegisteredObjs: <span class="hljs-built_in">seq</span>[(<span class="hljs-built_in">pointer</span>, <span class="hljs-type">ProcType</span>)] <span class="hljs-comment">## Global collection for all events</span>
+<span class="hljs-keyword">proc</span> invoke(msg: <span class="hljs-built_in">string</span> = <span class="hljs-string">&quot;&quot;</span>) =
+  <span class="hljs-comment">## This calls the callbacks passing the pointer and `msg`.</span>
+  <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">0</span> .. myRegisteredObjs.<span class="hljs-keyword">high</span>:
+    <span class="hljs-keyword">let</span> (obj, cb) = myRegisteredObjs[i]
+    cb(obj, msg)
+
+<span class="hljs-keyword">proc</span> registerEvent(obj: <span class="hljs-built_in">pointer</span>; prc: <span class="hljs-type">ProcType</span>) =
+  <span class="hljs-comment">## Adds an object and proc to the event list.</span>
+  <span class="hljs-keyword">when</span> <span class="hljs-string">compileOption&quot;checks&quot;</span>:
+    <span class="hljs-keyword">for</span> (otherObj, cb) <span class="hljs-keyword">in</span> myRegisteredObjs.items:
+      <span class="hljs-keyword">assert</span> obj != otherObj
+  myRegisteredObjs.add (obj, prc)
+
+<span class="hljs-keyword">proc</span> unregisterEvent(toRemove: <span class="hljs-built_in">pointer</span>) =
+  <span class="hljs-comment">## Removes an object and its coresponding callback from the event list</span>
+  <span class="hljs-keyword">for</span> i, (obj, cb) <span class="hljs-keyword">in</span> myRegisteredObjs.pairs:
+    <span class="hljs-keyword">if</span> obj == toRemove:
+      myRegisteredObjs.del(i)
+      <span class="hljs-keyword">break</span></code></pre>
+<h3>Naivety - it never hurts</h3>
+<p>Hey this does not seem too complicated you have three procedures, how badly can we really mess it up.
+You already might be thinking to yourself &quot;ah yes we just do <code>addr</code> on the variable we want and write a proc for it&quot;.
+Knowing that <code>addr</code> returns the address of a variable, that sounds like a brilliant idea, let us give it a whirl.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> doThing() =
+  <span class="hljs-keyword">var</span> a = <span class="hljs-number">300</span>
+  <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>; msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+    <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+    <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ptr int` back from the type erasure</span>
+    <span class="hljs-keyword">echo</span> msg, <span class="hljs-string">&quot; &quot;</span>, myVal
+
+  registerEvent(a.<span class="hljs-keyword">addr</span>, myIntCallBack)
+  invoke()
+
+doThing()
+invoke()</code></pre>
+<pre><samp> 300
+ 140737362057024
+</samp></pre>
+<p>The above output is from running with <code>--gc:arc</code>(refc is not deterministic so it may appear as if its working fine) and it shows a very odd issue, we did not mutate <code>a</code> but we got something other than <code>300</code>, how could this be?!</p>
+<h3>Manual Memory Management - Putting the C in Nim</h3>
+<p>If you already know about stack memory vs. heap memory the answer is as clear as transparent aluminium.
+<code>a</code> is a value type, which means its placed on the stack.
+Stack memory is a part of memory that is often overwritten due to being used for value types declared in procedures,
+since we are taking a pointer to that memory calling procedures that use the stack will unintentionally overwrite it.
+This is called a &quot;dangling pointer&quot;.
+We can get around dangling pointers by using heap memory.
+Heap memory is dynamically allocated and freed,
+that means we can make variables outlive their procedure.
+To accomplish this we will go with the C-like method of manually allocating and freeing.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> doThingPtr() =
+  <span class="hljs-keyword">var</span> a = create(<span class="hljs-built_in">int</span>)
+  a[] = <span class="hljs-number">400</span>
+  <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>; msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+    <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+    <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ptr int` back from the type erasure</span>
+    <span class="hljs-keyword">echo</span> myVal
+    <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>:
+      unregisterEvent(p)
+      dealloc(p)
+
+  registerEvent(a, myIntCallBack) <span class="hljs-comment">## Notice we do not do `addr` since we already have a `ptr int`</span>
+  invoke()
+
+doThingPtr()
+invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)</code></pre>
+<pre><samp>400
+400
+</samp></pre>
+<p><code>400</code> twice that is good, but how do we know what that memory is getting freed.
+If on Linux you can use your new favourite friend <code>valgrind</code>.
+Compiling the program with <code>--gc:arc -d:useMalloc</code>, <code>-d:useMalloc</code> is important as Nim's allocator does not play nice with valgrind.
+Now the program can be ran with valgrind by doing <code>valgrind ./MyProgramName</code>.</p>
+<p>After running we get a beautiful message:</p>
+<pre><code>HEAP SUMMARY:
+in use at exit: 0 bytes in 0 blocks
+total heap usage: 5 allocs, 5 frees, 1,080 bytes allocated
+All heap blocks were freed -- no leaks are possible
+</code></pre>
+<p>This is great, everything that was allocated was returned.</p>
+<h3>References - the well dressed pointers</h3>
+<p>You might be thinking to yourself &quot;Pointers are cool, but is this really all Nim has, a fancy 'create' template&quot;.
+That thought is missing the detail that Nim's <code>ref</code>s can be cast to <code>pointer</code> relatively safely.
+To continue with the project of reptitive nature, time to implement the <code>doThing</code> over yet again with a <code>ref int</code> instead.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> doThingRef() =
+  <span class="hljs-keyword">var</span> a = <span class="hljs-keyword">new</span>(<span class="hljs-built_in">int</span>)
+  a[] = <span class="hljs-number">400</span>
+  <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>; msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+    <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+    <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ref int` back from the type erasure</span>
+    <span class="hljs-keyword">echo</span> myVal
+    <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>:
+      unregisterEvent(p)
+
+  registerEvent(<span class="hljs-keyword">cast</span>[<span class="hljs-built_in">pointer</span>](a), myIntCallBack) <span class="hljs-comment">## Notice we do not do `addr` since we already have a `ptr int`</span>
+  invoke()
+
+doThingRef()
+invoke()
+invoke()
+invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)</code></pre>
+<pre><samp>400
+400
+3158068
+15822179425136947
+</samp></pre>
+<p>I am not a mathematician but that is not <code>400</code> 4 times.
+Much like pointers references are heap allocated but their lifetime is based off of the Garbage Collected(GC) code,
+which means in the above code when we cast to <code>pointer</code> Nim loses that the references are suppose to persist.
+Nim provides a <code>GCRef</code> procedure which allows you to manually increment the reference's lifetime counter.
+This allows you to use Nim's references but persist and even leak them if you miss use it.
+No procedure is complete without a negation and in this case that negation is <code>GcUnref</code> as one might assume this decrements the reference's lifetime counter.
+The following is the fixed reference code that properly manages the <code>ref</code>.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> doThingRefFixed() =
+  <span class="hljs-keyword">var</span> a = <span class="hljs-keyword">new</span>(<span class="hljs-built_in">int</span>)
+  a[] = <span class="hljs-number">400</span>
+  <span class="hljs-type">GcRef</span>(a)
+  <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>; msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+    <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+    <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ref int` back from the type erasure</span>
+    <span class="hljs-keyword">echo</span> myVal
+    <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>:
+      unregisterEvent(p)
+      <span class="hljs-type">GcUnref</span>(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)) <span class="hljs-comment">## Reduces lifetime back to 0, and get's GC to free it</span>
+  
+  registerEvent(<span class="hljs-keyword">cast</span>[<span class="hljs-built_in">pointer</span>](a), myIntCallBack)
+  invoke()
+
+doThingRefFixed()
+invoke()
+invoke()
+invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)</code></pre>
+<pre><samp>400
+400
+400
+400
+</samp></pre>
+<p>That looks right, before we pop the champagne maybe we should ensure it using valgrind again.</p>
+<pre><code>HEAP SUMMARY:
+in use at exit: 0 bytes in 0 blocks
+total heap usage: 10 allocs, 10 frees, 1,144 bytes allocated
+All heap blocks were freed -- no leaks are possible
+</code></pre>
+<p>That is all I need to read to be happy.</p>
+<h2>Collections - Gotta collect'em all</h2>
+<p>Many times interacting with C you will see <code>ptr UncheckedArray[T]</code> or <code>ptr T</code> which points you to the first element in an array.
+This is very tedious work with if you use it like in C.
+Consider the following C API imported to Nim.</p>
+<pre><code class="nim hljs">{.emit: <span class="hljs-string">&quot;&quot;&quot;
+// Get a dynamically allocated integer buffer
+int* getIntBuff(int* len){
+  int* buff = malloc(5 * sizeof(int));
+  for(int i = 0; i &lt; 5; i++){
+    buff[i] = i;
+  }
+  (*len) = 5;
+  return buff;
+}
+
+// Frees the dynamically allocated buffer
+void freeIntBuff(int* buff){
+  free(buff);
+}
+&quot;&quot;&quot;</span>.}
+<span class="hljs-keyword">proc</span> getIntBuff(len: <span class="hljs-keyword">var</span> <span class="hljs-built_in">cint</span>): <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">cint</span>] {.importc.}
+<span class="hljs-keyword">proc</span> freeIntBuff(buff: <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">cint</span>]) {.importc.}</code></pre>
+<p>Notice that we used <code>var cint</code> instead of <code>ptr cint</code> this can be done when you know the code just uses it as a mutable reference.
+This is a fairly simple API, we just call <code>getIntBuffer</code> use the buffer then when finished call <code>freeIntBuff</code> to deallocate it.
+So let's do that, though we will print the values out.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">var</span>
+  len = <span class="hljs-built_in">cint</span> <span class="hljs-number">0</span>
+  myBuff = getIntBuff(len)
+<span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;Output: &quot;</span>
+<span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">0</span> ..&lt; len:
+  <span class="hljs-literal">stdout</span>.write i
+  <span class="hljs-literal">stdout</span>.write <span class="hljs-string">':'</span>
+  <span class="hljs-literal">stdout</span>.write myBuff[i]
+  <span class="hljs-keyword">if</span> i &lt; len - <span class="hljs-number">1</span>:
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;, &quot;</span>
+  <span class="hljs-keyword">else</span>:
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">'\n'</span>
+    <span class="hljs-literal">stdout</span>.flushFile
+myBuff.freeIntBuff()</code></pre>
+<pre><samp>Output: 0:0, 1:1, 2:2, 3:3, 4:4
+</samp></pre>
+<p>When dealing with C arrays there is a slightly better way of writing the above.
+<code>toOpenArray</code> allows you to more easily iterate a C array it supports the common <code>items</code>, <code>pairs</code>, and <code>mitems</code> iterators enabling less redundant code.</p>
+<pre><code class="nim hljs"><span class="hljs-keyword">var</span>
+  myLen = <span class="hljs-built_in">cint</span> <span class="hljs-number">0</span>
+  myBuffNew = getIntBuff(myLen)
+<span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;Output: &quot;</span>
+<span class="hljs-keyword">for</span> i, x <span class="hljs-keyword">in</span> myBuffNew.toOpenArray(<span class="hljs-number">0</span>, myLen - <span class="hljs-number">1</span>):
+  <span class="hljs-literal">stdout</span>.write i
+  <span class="hljs-literal">stdout</span>.write <span class="hljs-string">':'</span>
+  <span class="hljs-literal">stdout</span>.write x
+  <span class="hljs-keyword">if</span> i &lt; myLen - <span class="hljs-number">1</span>:
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;, &quot;</span>
+  <span class="hljs-keyword">else</span>:
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">'\n'</span>
+    <span class="hljs-literal">stdout</span>.flushFile
+myBuffNew.freeIntBuff()</code></pre>
+<pre><samp>Output: 0:0, 1:1, 2:2, 3:3, 4:4
+</samp></pre>
+<p>This contrived example leads us into a more common case of <code>ptr T</code>, passing arrays to libraries.
+To start this off we will look at even more C code that will be wrapped in a nice Nim API.</p>
+<pre><code class="nim hljs">{.emit: <span class="hljs-string">&quot;&quot;&quot;
+// Iterate the collection printing output
+void printFloatArray(float* arr, int len){
+  printf(&quot;'arr' contains: &quot;);
+  for(int i = 0; i &lt; len; i++){
+    printf(&quot;%f &quot;, arr[i]);
+  }
+  printf(&quot;\n&quot;);
+}
+  &quot;&quot;&quot;</span>.}
+<span class="hljs-keyword">proc</span> printFloatArray(arr: <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]; len: <span class="hljs-built_in">cint</span>) {.importC,
+    nodecl.}
+<span class="hljs-keyword">var</span>
+  myTestArr = [<span class="hljs-number">1.0'f32</span>, <span class="hljs-number">5</span>, <span class="hljs-number">10.321</span>]
+  myTestSeq = @[<span class="hljs-number">0.0'f32</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3.14159</span>, <span class="hljs-number">3213</span>, <span class="hljs-number">42</span>]
+printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestArr.<span class="hljs-keyword">addr</span>),
+                <span class="hljs-built_in">cint</span> myTestArr.len)
+printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestSeq.<span class="hljs-keyword">addr</span>),
+                <span class="hljs-built_in">cint</span> myTestSeq.len)</code></pre>
+<pre><samp>'arr' contains: 1.000000 5.000000 10.321000 
+'arr' contains: 0.000000 0.000000 -4.347794 0.000000 0.000000 
+</samp></pre>
+<p>Odd the array works but the sequence fails.
+This is a similar issue to the one before <code>array</code> is a stack allocated value so its address is the address of the first element whereas <code>seq</code> is a heap allocated value.
+<code>seq</code> being heap allocated is due to the fact its a growable array.
+Its length is unknown at compile time and as such is heap allocated.
+Implementation aside due to the <code>array</code> printing fine we know that we want the same thing a pointer to the first element of the collection.
+So we can index the first value and take it's address.</p>
+<pre><code class="nim hljs">printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestSeq[<span class="hljs-number">0</span>].<span class="hljs-keyword">addr</span>),
+                <span class="hljs-built_in">cint</span> myTestSeq.len)</code></pre>
+<pre><samp>'arr' contains: 0.000000 2.000000 3.141590 3213.000000 42.000000 
+</samp></pre>
+<p>Important to note is that this is only the proper way to interoping with a procedure that operates on the collection then releases it.
+If the procedure holds onto reference you can have a dangling pointer to the heap of the sequence.
+Like prior this can either be solved with <code>GCRef</code> as before or with manual allocations.
+Since <code>seq</code> is growable if you <code>add</code> to the <code>seq</code> you can cause it to move memory and deallocate the old collection so choose wisely on your solution.</p>
+
+</main>
+<footer>
+<hr>
+<div class="nb-box">
+  <span><span class="nb-small">made with <a href="https://pietroppeter.github.io/nimib/">nimib 🐳</a></span></span>
+  <span></span>
+  <span><button class="nb-small" id="show" onclick="toggleSourceDisplay()">Show Source</button></span>
+</div>
+</footer>
+<section id="source">
+<pre><code class="nim hljs"><span class="hljs-keyword">import</span> nimib
+nbInit()
+nb.darkMode()
+nb.title = <span class="hljs-string">&quot;Nim - Pointer, confusing scary and over there.&quot;</span>
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+## Preamble - the planning phase
+
+If you have ever looked at library bindings for C code, you have certainly seen the scary `pointer` keyword.
+At first reading you may get nervous, scared and maybe even pee a little.
+Not to worry this writeup will hopefully explain how to gracefully walk with pointers in Nim.
+
+Imagine a world where you're presented with the following api, it could even be this world now:
+
+&quot;&quot;&quot;</span>
+nbCode:
+  <span class="hljs-keyword">type</span> <span class="hljs-type">ProcType</span> = <span class="hljs-keyword">proc</span>(a: <span class="hljs-built_in">pointer</span>, msg: <span class="hljs-built_in">string</span>){.nimcall.}
+
+  <span class="hljs-keyword">var</span> myRegisteredObjs: <span class="hljs-built_in">seq</span>[(<span class="hljs-built_in">pointer</span>, <span class="hljs-type">ProcType</span>)] <span class="hljs-comment">## Global collection for all events</span>
+
+
+  <span class="hljs-keyword">proc</span> invoke(msg: <span class="hljs-built_in">string</span> = <span class="hljs-string">&quot;&quot;</span>) =
+    <span class="hljs-comment">## This calls the callbacks passing the pointer and `msg`.</span>
+    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">0.</span>.myRegisteredObjs.<span class="hljs-keyword">high</span>:
+      <span class="hljs-keyword">let</span> (obj, cb) = myRegisteredObjs[i]
+      cb(obj, msg)
+
+  <span class="hljs-keyword">proc</span> registerEvent(obj: <span class="hljs-built_in">pointer</span>, prc: <span class="hljs-type">ProcType</span>) =
+    <span class="hljs-comment">## Adds an object and proc to the event list.</span>
+    <span class="hljs-keyword">when</span> <span class="hljs-string">compileOption&quot;checks&quot;</span>:
+      <span class="hljs-keyword">for</span> (otherObj, cb) <span class="hljs-keyword">in</span> myRegisteredObjs.items:
+        <span class="hljs-keyword">assert</span> obj != otherObj
+    myRegisteredObjs.add (obj, prc)
+
+  <span class="hljs-keyword">proc</span> unregisterEvent(toRemove: <span class="hljs-built_in">pointer</span>) =
+    <span class="hljs-comment">## Removes an object and its coresponding callback from the event list</span>
+    <span class="hljs-keyword">for</span> i, (obj, cb) <span class="hljs-keyword">in</span> myRegisteredObjs.pairs:
+      <span class="hljs-keyword">if</span> obj == toRemove:
+        myRegisteredObjs.del(i)
+        <span class="hljs-keyword">break</span>
+
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+### Naivety - it never hurts
+Hey this does not seem too complicated you have three procedures, how badly can we really mess it up.
+You already might be thinking to yourself &quot;ah yes we just do `addr` on the variable we want and write a proc for it&quot;.
+Knowing that `addr` returns the address of a variable, that sounds like a brilliant idea, let us give it a whirl.
+&quot;&quot;&quot;</span>
+
+nbCode:
+  <span class="hljs-keyword">proc</span> doThing() =
+    <span class="hljs-keyword">var</span> a = <span class="hljs-number">300</span> <span class="hljs-comment"># Make our var</span>
+    <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>, msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+      <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+      <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ptr int` back from the type erasure</span>
+      <span class="hljs-keyword">echo</span> msg, <span class="hljs-string">&quot; &quot;</span>, myVal
+
+    registerEvent(a.<span class="hljs-keyword">addr</span>, myIntCallBack) <span class="hljs-comment"># Add the integer</span>
+    invoke()
+
+
+  doThing()
+  invoke()
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+The above output is from running with `--gc:arc`(refc is not deterministic so it may appear as if its working fine) and it shows a very odd issue, we did not mutate `a` but we got something other than `300`, how could this be?!
+&quot;&quot;&quot;</span>
+
+myRegisteredObjs = @[]
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+### Manual Memory Management - Putting the C in Nim
+If you already know about stack memory vs. heap memory the answer is as clear as transparent aluminium.
+`a` is a value type, which means its placed on the stack.
+Stack memory is a part of memory that is often overwritten due to being used for value types declared in procedures,
+since we are taking a pointer to that memory calling procedures that use the stack will unintentionally overwrite it.
+This is called a &quot;dangling pointer&quot;.
+We can get around dangling pointers by using heap memory.
+Heap memory is dynamically allocated and freed,
+that means we can make variables outlive their procedure.
+To accomplish this we will go with the C-like method of manually allocating and freeing.
+&quot;&quot;&quot;</span>
+
+
+nbCode:
+  <span class="hljs-keyword">proc</span> doThingPtr() =
+    <span class="hljs-keyword">var</span> a = create(<span class="hljs-built_in">int</span>) <span class="hljs-comment"># heap allocate using un GC'd memory</span>
+    a[] = <span class="hljs-number">400</span> <span class="hljs-comment"># Make the heap int == 400</span>
+    <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>, msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+      <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+      <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ptr int` back from the type erasure</span>
+      <span class="hljs-keyword">echo</span> myVal
+      <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>: <span class="hljs-comment">## Just to allow us to dealloc here</span>
+        unregisterEvent(p)
+        dealloc(p)
+    registerEvent(a, myIntCallBack) <span class="hljs-comment">## Notice we do not do `addr` since we already have a `ptr int`</span>
+    invoke()
+
+
+  doThingPtr()
+  invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)
+
+nbtext:<span class="hljs-string">&quot;&quot;&quot;
+`400` twice that is good, but how do we know what that memory is getting freed.
+If on Linux you can use your new favourite friend `valgrind`.
+Compiling the program with `--gc:arc -d:useMalloc`, `-d:useMalloc` is important as Nim's allocator does not play nice with valgrind.
+Now the program can be ran with valgrind by doing `valgrind ./MyProgramName`.
+
+After running we get a beautiful message:
+```
+HEAP SUMMARY:
+in use at exit: 0 bytes in 0 blocks
+total heap usage: 5 allocs, 5 frees, 1,080 bytes allocated
+All heap blocks were freed -- no leaks are possible
+```
+This is great, everything that was allocated was returned.
+&quot;&quot;&quot;</span>
+
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+### References - the well dressed pointers
+You might be thinking to yourself &quot;Pointers are cool, but is this really all Nim has, a fancy 'create' template&quot;.
+That thought is missing the detail that Nim's `ref`s can be cast to `pointer` relatively safely.
+To continue with the project of reptitive nature, time to implement the `doThing` over yet again with a `ref int` instead.
+&quot;&quot;&quot;</span>
+
+nbCode:
+  <span class="hljs-keyword">proc</span> doThingRef() =
+    <span class="hljs-keyword">var</span> a = <span class="hljs-keyword">new</span>(<span class="hljs-built_in">int</span>) <span class="hljs-comment"># heap allocate using gc'd memory</span>
+    a[] = <span class="hljs-number">400</span> <span class="hljs-comment"># Make the heap int == 400</span>
+    <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>, msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+      <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+      <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ref int` back from the type erasure</span>
+      <span class="hljs-keyword">echo</span> myVal
+      <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>: <span class="hljs-comment">## Just to allow us to dealloc here</span>
+        unregisterEvent(p)
+    registerEvent(<span class="hljs-keyword">cast</span>[<span class="hljs-built_in">pointer</span>](a), myIntCallBack) <span class="hljs-comment">## Notice we do not do `addr` since we already have a `ptr int`</span>
+    invoke()
+
+
+  doThingRef()
+  invoke()
+  invoke()
+  invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+I am not a mathematician but that is not `400` 4 times.
+Much like pointers references are heap allocated but their lifetime is based off of the Garbage Collected(GC) code,
+which means in the above code when we cast to `pointer` Nim loses that the references are suppose to persist.
+Nim provides a `GCRef` procedure which allows you to manually increment the reference's lifetime counter.
+This allows you to use Nim's references but persist and even leak them if you miss use it.
+No procedure is complete without a negation and in this case that negation is `GcUnref` as one might assume this decrements the reference's lifetime counter.
+The following is the fixed reference code that properly manages the `ref`.
+&quot;&quot;&quot;</span>
+
+nbCode:
+  <span class="hljs-keyword">proc</span> doThingRefFixed() =
+    <span class="hljs-keyword">var</span> a = <span class="hljs-keyword">new</span>(<span class="hljs-built_in">int</span>) <span class="hljs-comment"># heap allocate using gc'd memory</span>
+    a[] = <span class="hljs-number">400</span> <span class="hljs-comment"># Make the heap int == 400</span>
+    <span class="hljs-type">GcRef</span>(a) <span class="hljs-comment"># Extend the lifetime of `a`</span>
+    <span class="hljs-keyword">proc</span> myIntCallback(p: <span class="hljs-built_in">pointer</span>, msg: <span class="hljs-built_in">string</span>) {.nimcall.} =
+      <span class="hljs-comment">## Our procedure to run on `invoke`</span>
+      <span class="hljs-keyword">let</span> myVal = <span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)[] <span class="hljs-comment">## Get the `ref int` back from the type erasure</span>
+      <span class="hljs-keyword">echo</span> myVal
+      <span class="hljs-keyword">if</span> msg == <span class="hljs-string">&quot;dealloc&quot;</span>: <span class="hljs-comment">## Just to allow us to dealloc here</span>
+        unregisterEvent(p)
+        <span class="hljs-type">GcUnref</span>(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ref</span> <span class="hljs-built_in">int</span>](p)) <span class="hljs-comment">## Reduces lifetime back to 0, and get's GC to free it</span>
+    registerEvent(<span class="hljs-keyword">cast</span>[<span class="hljs-built_in">pointer</span>](a), myIntCallBack) <span class="hljs-comment"># Notice we do not do `addr` since we already have a `ptr int`</span>
+    invoke()
+
+
+  doThingRefFixed()
+  invoke()
+  invoke()
+  invoke(<span class="hljs-string">&quot;dealloc&quot;</span>)
+
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+That looks right, before we pop the champagne maybe we should ensure it using valgrind again.
+
+```
+HEAP SUMMARY:
+in use at exit: 0 bytes in 0 blocks
+total heap usage: 10 allocs, 10 frees, 1,144 bytes allocated
+All heap blocks were freed -- no leaks are possible
+```
+That is all I need to read to be happy.
+&quot;&quot;&quot;</span>
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+## Collections - Gotta collect'em all
+Many times interacting with C you will see `ptr UncheckedArray[T]` or `ptr T` which points you to the first element in an array.
+This is very tedious work with if you use it like in C.
+Consider the following C API imported to Nim.
+&quot;&quot;&quot;</span>
+nbCode:
+  {.emit:<span class="hljs-string">&quot;&quot;&quot;
+
+// Get a dynamically allocated integer buffer
+int* getIntBuff(int* len){
+  int* buff = malloc(5 * sizeof(int));
+  for(int i = 0; i &lt; 5; i++){
+    buff[i] = i;
+  }
+  (*len) = 5;
+  return buff;
+}
+
+// Frees the dynamically allocated buffer
+void freeIntBuff(int* buff){
+  free(buff);
+}
+&quot;&quot;&quot;</span>.}
+
+  <span class="hljs-keyword">proc</span> getIntBuff(len: <span class="hljs-keyword">var</span> <span class="hljs-built_in">cint</span>): <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">cint</span>] {.importc.}
+  <span class="hljs-keyword">proc</span> freeIntBuff(buff: <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">cint</span>]) {.importc.}
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+Notice that we used `var cint` instead of `ptr cint` this can be done when you know the code just uses it as a mutable reference.
+This is a fairly simple API, we just call `getIntBuffer` use the buffer then when finished call `freeIntBuff` to deallocate it.
+So let's do that, though we will print the values out.
+&quot;&quot;&quot;</span>
+
+nbcode:
+  <span class="hljs-keyword">var</span>
+    len = <span class="hljs-built_in">cint</span> <span class="hljs-number">0</span>
+    myBuff = getIntBuff(len)
+  <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;Output: &quot;</span>
+  <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">0.</span>.&lt;len:
+    <span class="hljs-literal">stdout</span>.write i
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">':'</span>
+    <span class="hljs-literal">stdout</span>.write myBuff[i]
+    <span class="hljs-keyword">if</span> i &lt; len - <span class="hljs-number">1</span>:
+      <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;, &quot;</span>
+    <span class="hljs-keyword">else</span>:
+      <span class="hljs-literal">stdout</span>.write <span class="hljs-string">'\n'</span>
+      <span class="hljs-literal">stdout</span>.flushFile
+  myBuff.freeIntBuff()
+
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+When dealing with C arrays there is a slightly better way of writing the above.
+`toOpenArray` allows you to more easily iterate a C array it supports the common `items`, `pairs`, and `mitems` iterators enabling less redundant code.
+&quot;&quot;&quot;</span>
+
+nbCode:
+  <span class="hljs-keyword">var</span>
+    myLen = <span class="hljs-built_in">cint</span> <span class="hljs-number">0</span>
+    myBuffNew = getIntBuff(myLen)
+  <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;Output: &quot;</span>
+  <span class="hljs-keyword">for</span> i, x <span class="hljs-keyword">in</span> myBuffNew.toOpenArray(<span class="hljs-number">0</span>, myLen - <span class="hljs-number">1</span>):
+    <span class="hljs-literal">stdout</span>.write i
+    <span class="hljs-literal">stdout</span>.write <span class="hljs-string">':'</span>
+    <span class="hljs-literal">stdout</span>.write x
+    <span class="hljs-keyword">if</span> i &lt; myLen - <span class="hljs-number">1</span>:
+      <span class="hljs-literal">stdout</span>.write <span class="hljs-string">&quot;, &quot;</span>
+    <span class="hljs-keyword">else</span>:
+      <span class="hljs-literal">stdout</span>.write <span class="hljs-string">'\n'</span>
+      <span class="hljs-literal">stdout</span>.flushFile
+  myBuffNew.freeIntBuff()
+
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+This contrived example leads us into a more common case of `ptr T`, passing arrays to libraries.
+To start this off we will look at even more C code that will be wrapped in a nice Nim API.
+&quot;&quot;&quot;</span>
+nbCode:
+  {.emit:<span class="hljs-string">&quot;&quot;&quot;
+
+// Iterate the collection printing output
+void printFloatArray(float* arr, int len){
+  printf(&quot;'arr' contains: &quot;);
+  for(int i = 0; i &lt; len; i++){
+    printf(&quot;%f &quot;, arr[i]);
+  }
+  printf(&quot;\n&quot;);
+}
+  &quot;&quot;&quot;</span>.}
+  <span class="hljs-keyword">proc</span> printFloatArray(arr: <span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>], len: <span class="hljs-built_in">cint</span>) {.importC, nodecl.}
+  <span class="hljs-keyword">var</span>
+    myTestArr = [<span class="hljs-number">1</span>f, <span class="hljs-number">5</span>, <span class="hljs-number">10.321</span>]
+    myTestSeq = @[<span class="hljs-number">0</span>f, <span class="hljs-number">2</span>, <span class="hljs-number">3.14159</span>, <span class="hljs-number">3213</span>, <span class="hljs-number">42</span>]
+  printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestArr.<span class="hljs-keyword">addr</span>), <span class="hljs-built_in">cint</span> myTestArr.len)
+  printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestSeq.<span class="hljs-keyword">addr</span>), <span class="hljs-built_in">cint</span> myTestSeq.len)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+Odd the array works but the sequence fails.
+This is a similar issue to the one before `array` is a stack allocated value so its address is the address of the first element whereas `seq` is a heap allocated value.
+`seq` being heap allocated is due to the fact its a growable array.
+Its length is unknown at compile time and as such is heap allocated.
+Implementation aside due to the `array` printing fine we know that we want the same thing a pointer to the first element of the collection.
+So we can index the first value and take it's address.
+&quot;&quot;&quot;</span>
+nbCode:
+  printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestSeq[<span class="hljs-number">0</span>].<span class="hljs-keyword">addr</span>), <span class="hljs-built_in">cint</span> myTestSeq.len)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+Important to note is that this is only the proper way to interoping with a procedure that operates on the collection then releases it.
+If the procedure holds onto reference you can have a dangling pointer to the heap of the sequence.
+Like prior this can either be solved with `GCRef` as before or with manual allocations.
+Since `seq` is growable if you `add` to the `seq` you can cause it to move memory and deallocate the old collection so choose wisely on your solution.
+&quot;&quot;&quot;</span>
+
+nbSave()
+</code></pre>
+</section><script>
+function toggleSourceDisplay() {
+  var btn = document.getElementById("show")
+  var source = document.getElementById("source");
+  if (btn.innerHTML=="Show Source") {
+    btn.innerHTML = "Hide Source";
+    source.style.display = "block";
+  } else {
+    btn.innerHTML = "Show Source";
+    source.style.display = "none";
+  }
+}
+</script></body>
+</html>
