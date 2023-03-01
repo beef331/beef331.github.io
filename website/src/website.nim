@@ -195,12 +195,14 @@ proc parseUrl() =
       kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
     currentPage = kind
   except: discard
+
 proc makeDom(): VNode =
   document.title = "Jason Beetham"
   parseUrl()
   buildhtml:
     section:
-      makeHead()
+      let header = static: makeHead()
+      header
       body:
         makeNavBar()
         video(class = "backVideo", autoplay = "", muted = "", loop = ""):
@@ -208,9 +210,11 @@ proc makeDom(): VNode =
         tdiv(class = "wrapper"):
           case currentPage:
           of home:
-            makeProjects()
+            let val = static: makeProjects()
+            val
           of showcase:
-            makeShowcase()
+            let val = static: makeShowcase()
+            val
 
       makeFooter()
 
