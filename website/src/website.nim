@@ -1,6 +1,6 @@
-include karax / prelude
-from dom import window, Location, document, decodeURI
-import std/[macros, strutils]
+import karax / [karaxdsl, vdom]
+
+import std/[macros, strutils, os]
 type
   Post = object
     name, imgurl, linkurl, desc: string
@@ -9,7 +9,9 @@ type
   ShowcaseEntry = object
     name, url: string
   Pages = enum
-    home = "#Projects", showcase = "#Showcase"
+    home = "index.html", showcase = "showcase.html", writeups = "writeups.html"
+
+const pageName = [home: "Home", showcase: "Showcase", writeups: "Writeups"]
 
 
 proc initPost(name, imgurl, linkurl, desc: string): Post =
@@ -110,7 +112,6 @@ const
       url: "videos/pointrenderer.mp4"
     )
   ]
-var currentPage = home
 
 proc makeEntries(): VNode =
   result = buildHtml(ul):
@@ -135,18 +136,8 @@ proc makeHead(): VNode =
     title():
       text "Jason Beetham"
 
-proc makeNavbar: VNode =
-  proc pageButton(kind: Pages, str: string): VNode =
-    buildHtml():
-      if currentPage != kind:
-        a(onclick = proc() =
-          currentPage = kind
-          window.location.href = $kind):
-          text str
-      else:
-        a(id = "pageOn"):
-          text str
-
+proc makeNavbar(currPage: Pages): VNode =
+  
   buildHtml(header):
     tdiv(class = "navbar"):
       ul:
@@ -154,11 +145,15 @@ proc makeNavbar: VNode =
           text "Jason Beetham"
         li:
           text "Software Developer"
-        li(class = "rightSide"):
-          pageButton(showcase, "Showcase")
+        for page in Pages:
+          li(class = "rightSide"):
+            if page == currPage:
+              a(id = "pageOn"):
+                text pageName[page]
+            else:
+              a(href = $page):
+                text pageName[page]
 
-        li(class = "rightSide"):
-          pageButton(home, "Projects")
 
 proc makeFooter: Vnode =
   buildHtml:
@@ -188,35 +183,42 @@ proc makeShowcase(): VNode =
           video(src = entry.url, controls = "")
         hr()
 
-proc parseUrl() =
-  try:
-    let
-      loc = ($window.location.href)
-      kind = parseEnum[Pages](loc[loc.rfind('/') + 1 .. ^1])
-    currentPage = kind
-  except: discard
+proc makeWriteups(): VNode =
+  buildHtml(tdiv(class = "page")):
+    h1:
+      text "Write-ups"
+    hr()
+    ul:
+      for file in "writeups".walkDir():
+        let (_, name, ext) = file.path.splitFile
+        if ext == ".html":
+          li(class = "writeups"):
+            a(href = file.path):
+              text name
 
-proc makeDom(): VNode =
-  document.title = "Jason Beetham"
-  parseUrl()
+
+proc makeDom(page: Pages): VNode =
+  #document.title = "Jason Beetham"
+  #parseUrl()
   buildhtml:
     section:
-      let header = static: makeHead()
+      let header = makeHead()
       header
       body:
-        makeNavBar()
+        makeNavBar(page)
         video(class = "backVideo", autoplay = "", muted = "", loop = ""):
           source(src = "/videos/backvideo.mp4")
         tdiv(class = "wrapper"):
-          case currentPage:
+          case page:
           of home:
-            let val = static: makeProjects()
-            val
+            makeProjects()
           of showcase:
-            let val = static: makeShowcase()
-            val
+            makeShowcase()
+          of writeups:
+            makeWriteups()
 
       makeFooter()
 
 
-setRenderer makeDom
+for page in Pages:
+  writeFile($page, $makeDom(page))
