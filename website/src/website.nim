@@ -117,7 +117,7 @@ proc makeEntries(): VNode =
   result = buildHtml(ul):
     for post in Posts:
       li(class = "project"):
-        a(class = "post", href = post.linkurl):
+        a(class = "post", href = post.linkurl, fetchpriority = "low"):
           tdiv(class = "imageHolder"):
             img(src = post.imgurl)
           h2: text post.name
@@ -125,6 +125,7 @@ proc makeEntries(): VNode =
 
 proc makeHead(): VNode =
   result = buildHtml(head(class = "header")):
+    link(rel = "preload", href = "main.css", `as` = "style")
     link(rel = "stylesheet", type = "text/css", href = "main.css")
     link(
       rel = "stylesheet", type = "text/css",
@@ -208,7 +209,7 @@ proc makeDom(page: Pages): VNode =
       body:
         makeNavBar(page)
         video(class = "backVideo", autoplay = "", muted = "", loop = ""):
-          source(src = "/videos/backvideo.mp4")
+          source(src = "/videos/backvideo.mp4", fetchpriority="low")
         tdiv(class = "wrapper"):
           case page:
           of home:
