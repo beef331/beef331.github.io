@@ -139,20 +139,21 @@ proc makeHead(): VNode =
 proc makeNavbar(currPage: Pages): VNode =
   
   buildHtml(header):
-    tdiv(class = "navbar"):
-      ul:
-        li(class = "title"):
-          text "Jason Beetham"
-        li:
-          text "Software Developer"
-        for page in Pages:
-          li(class = "rightSide"):
-            if page == currPage:
-              a(id = "pageOn"):
-                text pageName[page]
-            else:
-              a(href = $page):
-                text pageName[page]
+    nav(layout = "", horizontal = ""):
+      h1():
+        text "Jason Beetham"
+      h2():
+        text "Software Developer"
+      input(id = "menu-button", type = "checkbox")
+      label( `for` = "menu-button", class = "fas")
+      for page in Pages:
+        li(class = "rightSide"):
+          if page == currPage:
+            a(id = "pageOn"):
+              text pageName[page]
+          else:
+            a(href = $page):
+              text pageName[page]
 
 
 proc makeFooter: Vnode =

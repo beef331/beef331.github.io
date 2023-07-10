@@ -2,7 +2,7 @@
 @import url("https://fonts.googleapis.com/css?family=Patua+One");
 header {
   width: 100%;
-  height: 60px;
+  height: 4em;
   position: fixed;
   top: 0;
   left: 0;
@@ -13,33 +13,30 @@ header {
   z-index: 1;
 }
 
-.navbar {
+#menu-button{
+  display: none;
+}
+
+nav {
   height: 100%;
   width: 100%;
   border-bottom: 5px solid #43BF63;
   background: #164021;
 }
 
-.navbar ul {
+nav {
   list-style-type: none;
-  font-size: 24px;
-  margin: 0;
-  padding: 0;
-  margin-left: 30px;
+  font-size: 1em;
+  display: inline-block;
 }
 
-.navbar li {
-  align-self: center;
-  line-height: 60px;
-  float: left;
+nav *{
+  display: initial;
+  margin-left: 1em;
 }
 
-.navbar a:hover {
+nav a:hover {
   color: #51E576;
-}
-
-.navbar .title {
-  font-size: 50px;
 }
 
 a {
@@ -51,12 +48,10 @@ a:hover {
   color: #5AFF84;
 }
 
-.navbar .rightSide {
-  font-size: 30px;
-  margin: 0 30px;
-  float: right;
+nav .rightSide {
   color: #246534;
 }
+
 .rightSide a{
   color: #246534;
   cursor: pointer;
@@ -69,7 +64,7 @@ a:hover {
 .page {
   width: 65%;
   text-align: center;
-  margin: 60px auto 0 auto;
+  margin: 5em auto 0 auto;
   overflow: visible;
 }
 
@@ -120,7 +115,7 @@ ul {
 }
 
 h2 {
-  font-size: 30px;
+  font-size: 2em;
 }
 
 hr {
@@ -172,12 +167,12 @@ body {
   border-top: 5px solid #43BF63;
   background: #164021;
   text-align: center;
-  font-size: 30px;
+  font-size: 2em;
   box-shadow: 0px 0px 20px black;
 }
 
 h1 {
-  font-size: 50px;
+  font-size: 3em;
 }
 
 .fontAwesomeLink {
@@ -200,7 +195,7 @@ i {
   }
 
   .project p {
-    font-size: 20px;
+    font-size: 0.5em;
   }
 
   .project {
@@ -217,23 +212,37 @@ i {
     margin: 0px 30px;
   }
 }
+
 @media screen and (min-device-width: 1080px) and (max-width: 1060px) {
   .page {
     width: 90%;
   }
 
-  .navbar li {
-    font-size: 14px;
-    top: 50%;
+  header {
+    position: absolute;
   }
 
-  .navbar a {
-    font-size: 20px;
+  nav li {
+    font-size: 2em;
+    margin-left: 0;
   }
 
-  .navbar .title {
-    font-size: 40px;
+  nav a {
+    font-size: 1em;
   }
+
+  nav h1 {
+    font-size: 2em;
+  }
+
+  nav h2 {
+    font-size: 1em;
+  }
+
+  nav > h2{
+    display: none;
+  }
+
 
   .imageHolder {
     display: none;
@@ -246,6 +255,34 @@ i {
     width: 100%;
     height: 250px;
   }
-}
+  
+  #menu-button ~ li{
+    display: none;
+  }
 
-/*# sourceMappingURL=main.css.map */
+  .footer {
+    position: absolute;
+    bottom: inherit;
+  }
+
+
+  #menu-button:checked ~ li{
+    display: block;
+    background: #164021;
+  }
+
+
+  #menu-button + label{
+    font-size: 2em;
+    float: right;
+    margin: 0.5em;
+  }
+
+  #menu-button + label:before {
+    content: "\f0c9"; 
+  }
+
+  #menu-button:checked + label:before {
+    content: "\f0aa"; 
+  }
+}
