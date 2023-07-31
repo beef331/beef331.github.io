@@ -209,6 +209,7 @@ i {
 
 .wrapper {
   min-height: 100vh;
+  margin-bottom: 3em;
 }
 
 @media screen and (max-device-width: 900px) {
