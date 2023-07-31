@@ -17,6 +17,26 @@ header {
   display: none;
 }
 
+.writeup-button{
+  display: none;
+}
+
+label{
+  cursor: pointer;
+}
+
+.writeup{
+  display: none;
+}
+
+.writeup-button:not(:checked) ~ hr{
+  display: none;
+}
+
+.writeup-button ~ label{
+  font-size: 2em;
+}
+
 nav {
   height: 100%;
   width: 100%;
@@ -121,7 +141,6 @@ h2 {
 hr {
   border: 4px solid #43BF63;
   border-radius: 4px;
-  margin: 0px auto;
 }
 
 #body{
@@ -186,6 +205,10 @@ h1 {
 
 i {
   margin: 3 auto;
+}
+
+.wrapper {
+  min-height: 100vh;
 }
 
 @media screen and (max-device-width: 900px) {
@@ -285,4 +308,15 @@ i {
   #menu-button:checked + label:before {
     content: "\f0aa"; 
   }
+}
+
+.writeup-button:checked ~ iframe{
+  display: inherit;
+  width: 100%;
+  height: 50em;
+  background: #164021;
+}
+
+.writeup-button:checked ~ hr{
+  display: inherit;
 }

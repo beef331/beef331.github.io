@@ -1,6 +1,6 @@
 import karax / [karaxdsl, vdom]
 
-import std/[macros, strutils, os]
+import std/[macros, strutils, os, enumerate]
 type
   Post = object
     name, imgurl, linkurl, desc: string
@@ -191,12 +191,16 @@ proc makeWriteups(): VNode =
       text "Write-ups"
     hr()
     ul:
-      for file in "writeups".walkDir():
+      for i, file in enumerate "writeups".walkDir():
         let (_, name, ext) = file.path.splitFile
         if ext == ".html":
           li(class = "writeups"):
-            a(href = file.path):
+            let id = "writeup-button" & $i
+            input(id = id, class = "writeup-button", type = "checkbox")
+            label( `for` = id, class = "fas"):
               text name
+            iframe(class = "writeup", src = file.path)
+            hr()
 
 
 proc makeDom(page: Pages): VNode =
