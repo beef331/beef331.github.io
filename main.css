@@ -175,7 +175,6 @@ body {
 .footer {
   width: 100%;
   height: 35px;
-  position: relative;
   bottom: 0px;
   border-top: 5px solid #43BF63;
   background: #164021;
@@ -205,34 +204,11 @@ i {
   min-height: 100vh;
 }
 
-@media screen and (max-device-width: 600px) {
+
+
+@media (max-width: 720px) {
   .page {
-    width: 90%;
-    overflow: hidden;
-  }
-
-  .project p {
-    font-size: 0.5em;
-  }
-
-  .project {
-    text-align: center;
-  }
-
-  .footer {
-    width: 100%;
-    height: 90px;
-    font-size: 75px;
-  }
-
-  .fontAwesomeLink {
-    margin: 0px 30px;
-  }
-}
-
-@media screen and (min-device-width: 1080px) and (max-width: 1060px) {
-  .page {
-    width: 90%;
+    width: 95%;
   }
 
   nav li {
@@ -256,28 +232,39 @@ i {
     display: none;
   }
 
+  .project *{
+    display: block;
+  }
+  
+  .project p{
+    display: inline;
+    text-align: center;
+  }
 
-  .imageHolder {
-    display: none;
-    width: 0px;
-    height: 0px;
+  .project img{
+    width: 100%;
+    max-width: unset;
+    max-height: unset;
+    float: unset;
+    margin: unset;
   }
 
   .project {
-    margin: 0px;
+    height: fit-content;
     width: 100%;
-    height: 250px;
   }
-  
+
+  .project a{
+    height: fit-content;
+  }
+
+  .project .imageHolder {
+    float: none;
+  }
+
   #menu-button ~ li{
     display: none;
   }
-
-  .footer {
-    position: absolute;
-    bottom: inherit;
-  }
-
 
   #menu-button:checked ~ li{
     display: block;
