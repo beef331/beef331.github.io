@@ -91,6 +91,27 @@ Launch projectiles from a Planet and watch its trajectory.
 All planets are procedurally textured in shader.
 """
 
+  child:
+    name: "Very Simple Binary Format"
+    image: "images/nim.svg"
+    link: "https://www.github.com/beef331/vsbf"
+    desc: """
+As the name implies this is a simple binary format which is inspired by message pack and bson.
+Data is strongly typed and field names are stored.
+Unlike other formats field names are deduplicated at their first usage which saves a bit of space if not compressing.
+"""
+
+  child:
+    name: "Potato"
+    image: "images/nim.svg"
+    link: "https://www.github.com/beef331/potato"
+    desc: """
+Potato is a dynamic library based hot code reload library.
+Included with it is potatowatcher a program which uses inotify to watch files for changes to cause a recompilation.
+Using Potato I have succesfully tied it into two of my game projects giving automatic hot code reloads.
+All without forcing the end project build with reload support.
+"""
+
 const
   footerEntries = [
     FooterEntry(
@@ -110,6 +131,14 @@ const
     ShowCaseEntry(
       name: "Point Renderer",
       url: "videos/pointrenderer.mp4"
+    ),
+    ShowCaseEntry(
+      name: "Mind the Gap 3D",
+      url: "videos/Mind The Gap 3D.mp4"
+    ),
+    ShowcaseEntry(
+      name: "Keyboard Warrior",
+      url: "videos/Keyboard Warrior.mp4"
     )
   ]
 

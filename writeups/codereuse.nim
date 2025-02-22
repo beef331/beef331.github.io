@@ -161,9 +161,8 @@ Hopefully this starts the cogs spinning, but to look further in the capabilities
 nbCode:
   type
     Promptable = concept p, type P
-      var str = ""
       writeParam(p) # Ensure a `writeParam` procedure takes an instance of this type
-      parseInput(str, P) is P # Ensure there is a procedure that parses input returning `P`
+      parseInput(var string, P) is P # Ensure there is a procedure that parses input returning `P`
       p == p is bool # We need to compare for `Defaultable`, best to be here
 
     Defaultable = concept type D
@@ -229,8 +228,7 @@ Finally the procedures can be implemented for a type, here a basic `bool` implem
 """
 
 nbCode:
-
-  proc paramOptions(_: typedesc[bool]): auto = [true, false]
+  proc paramOptions(_: typedesc[bool]): array[2, bool] = [true, false]
 
   proc writeParam(b: bool) =
     stdout.write:

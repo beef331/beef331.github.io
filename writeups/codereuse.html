@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en-us">
 <head>
-  <title>codereuse.nim</title>
+  <title>writeups/codereuse.nim</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🐳</text></svg>">
   <meta content="text/html; charset=utf-8" http-equiv="content-type">
   <meta content="width=device-width, initial-scale=1" name="viewport">
-  <link rel='stylesheet' href='https://unpkg.com/normalize.css'>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/dark.min.css">
+  <meta content="nimib 0.3.10" name="generator">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css">
   <link rel='stylesheet' href='https://cdn.jsdelivr.net/gh/pietroppeter/nimib/assets/androidstudio.css'>
+    <script src="https://cdn.jsdelivr.net/gh/pietroppeter/nimib@main/assets/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
   <style>
 .nb-box {
   display: flex;
@@ -26,18 +29,27 @@ button.nb-small {
 section#source {
   display:none
 }
-
+pre > code {
+  font-size: 1.2em;
+}
 .nb-output {
   line-height: 1.15;
 }
+figure {
+  margin: 2rem 0;
+}
+figcaption {
+  text-align: center;
+}
+  
 </style>
   
 </head>
 <body>
 <header>
 <div class="nb-box">
-  <span><a href=".">🏡</a></span>
-  <span><code>codereuse.nim</code></span>
+  <span><a href="..">🏡</a></span>
+  <span><code>writeups/codereuse.nim</code></span>
   <span><a href="https://github.com/beef331/beef331.github.io"><svg aria-hidden="true" width="1.2em" height="1.2em" style="vertical-align: middle; fill: #fff" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a></span>
 </div>
 <hr>
@@ -47,12 +59,12 @@ section#source {
 Nim has a few mechanisms to enable very good code reuse.
 This writeup will demonstrate these best practices to ensure code is not written more than needed.
 To start the build up of these mechanisms consider a procedure that iterates a sequence and prints each element.</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](s: <span class="hljs-built_in">seq</span>[<span class="hljs-type">T</span>]) =
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](s: <span class="hljs-built_in">seq</span>[<span class="hljs-type">T</span>]) =
   <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> s:
     <span class="hljs-keyword">echo</span> x</code></pre>
 <p>This is all fine and dandy now one can print all values of a sequence on their own line, but now consider using <code>printAllValues</code> on a <code>array[10, int]</code>.
 One's reaction might be &quot;I can just make an array variation&quot;</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">Idx</span>, <span class="hljs-type">T</span>](a: <span class="hljs-built_in">array</span>[<span class="hljs-type">Idx</span>, <span class="hljs-type">T</span>]) =
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">Idx</span>, <span class="hljs-type">T</span>](a: <span class="hljs-built_in">array</span>[<span class="hljs-type">Idx</span>, <span class="hljs-type">T</span>]) =
   <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> a:
     <span class="hljs-keyword">echo</span> x</code></pre>
 <p>See I personally had trouble in math aswell, to me that seems like two identical implementations of a procedure.
@@ -65,7 +77,7 @@ Whenever writing code one should always use an <code>openarray</code> if it fits
 Due to their implementation <code>openArray</code>s allow you to use memory safe collections like <code>array</code> or <code>seq</code>, but also allow manual managed collections as there is a <code>toOpenArray</code> that accepts a <code>ptr UncheckedArray[T]</code>.</p>
 <p>Since there is a <code>toOpenArrayByte</code> for <code>openArray[char]</code> any code that operates on binary data should use <code>openArray[byte]</code> since it allows <em>all</em> collections to work with it, unlike <code>openArray[char]</code>, <code>string</code>, or <code>seq[byte]</code>.</p>
 <p>So what can be done instead is write a procedure that operates on an <code>openArray[T]</code> as follows:</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](oa: openArray[<span class="hljs-type">T</span>]) =
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](oa: openArray[<span class="hljs-type">T</span>]) =
   <span class="hljs-keyword">for</span> x <span class="hljs-keyword">in</span> oa:
     <span class="hljs-keyword">echo</span> x
 
@@ -80,7 +92,7 @@ a[<span class="hljs-number">0</span>] = <span class="hljs-number">300</span>
 a[<span class="hljs-number">1</span>] = <span class="hljs-number">200</span>
 a.toOpenArray(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>).printAllValues() <span class="hljs-comment"># Look maw even raw ptrs?!</span>
 <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;Ptr'd&quot;</span>
-dealloc(a)</code></pre><pre class="nb-output"><samp>10
+dealloc(a)</code></pre><pre class="nb-output">10
 20
 30
 Array'd
@@ -90,7 +102,7 @@ Array'd
 Seq'd
 300
 200
-Ptr'd</samp></pre>
+Ptr'd</pre>
 <p>Oh it's that easy?!
 Yes, but now to interject this happy train of thought ... what if one wants to call this procedure with a table or any other collection?</p>
 <h2>Unconstrained Generics - Kangaroo court is in session</h2>
@@ -100,7 +112,7 @@ This process is called instantiation, which is why calling a procedure may creat
 Generics have a feature called <code>mixin</code> which allow the compiler to look at the scope of instantion aswell as declaration for a symbol.
 This allows something some refer to as a &quot;Generic Interface&quot;, where user code allows overriding behaviour without runtime costs.
 A possible solution for an unconstrained generic would look something like:</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](coll: <span class="hljs-type">T</span>) =
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>](coll: <span class="hljs-type">T</span>) =
   <span class="hljs-keyword">mixin</span> items
   <span class="hljs-comment">## Remember `mixin` tells the compiler &quot;Look for this implementation at procedure declaration and instiantiation&quot;</span>
   <span class="hljs-keyword">for</span> val <span class="hljs-keyword">in</span> coll.items: <span class="hljs-comment"># There is a bug with implicit `items` so calling it explicitly inside a generic is best health for everyone</span>
@@ -123,7 +135,7 @@ They do not exist at runtime and only are used for constraining generics.
 There are two versions of <code>concept</code>s this will be looking at the more flexible old style of them.
 The old variant of <code>concept</code>s are very eldritch to look at, but they are relatively simple.
 All that happens is the compiler attempts to compile the statement and then checks if that line is a boolean and if it is true.</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">type</span> <span class="hljs-type">Iterable</span> = <span class="hljs-keyword">concept</span> i <span class="hljs-comment"># This introduces a var i: TheCheckedType</span>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">type</span> <span class="hljs-type">Iterable</span> = <span class="hljs-keyword">concept</span> i <span class="hljs-comment"># This introduces a var i: TheCheckedType</span>
   <span class="hljs-keyword">for</span> _ <span class="hljs-keyword">in</span> i.items: <span class="hljs-keyword">discard</span> <span class="hljs-comment"># Ensure this type has a `items` iterator</span>
 
 <span class="hljs-keyword">proc</span> printAllValues[<span class="hljs-type">T</span>: <span class="hljs-type">Iterable</span>](iter: <span class="hljs-type">T</span>) =
@@ -146,12 +158,12 @@ printAllValues [<span class="hljs-number">10</span>, <span class="hljs-number">2
   <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-number">0.</span>.&lt;myType.a:
     <span class="hljs-keyword">yield</span> i
 
-<span class="hljs-type">MyType</span>(a: <span class="hljs-number">2</span>).printAllValues() <span class="hljs-comment"># wow this works</span></code></pre><pre class="nb-output"><samp>(&quot;a&quot;, &quot;b&quot;)
+<span class="hljs-type">MyType</span>(a: <span class="hljs-number">2</span>).printAllValues() <span class="hljs-comment"># wow this works</span></code></pre><pre class="nb-output">(&quot;a&quot;, &quot;b&quot;)
 (&quot;b&quot;, &quot;c&quot;)
 10
 20
 0
-1</samp></pre>
+1</pre>
 <p>The benefit of this approach is there is now an explicitly designed API, inside a procedure using a concept one should only use procedures the concept declares or that are certainly unconstrained.
 To replicate the test of <code>(int, int)</code> previously done.</p>
 <pre><code>Error: type mismatch: got &lt;(int, int)&gt;
@@ -164,11 +176,10 @@ proc printAllValues[T: Iterable](iter: T)
 <p>This error message is a bit more clear we did not pass something that is <code>Iterable</code> so we then can look at the implementation of <code>Iterable</code> and see it needs an <code>items</code>.
 Hopefully this starts the cogs spinning, but to look further in the capabilities of concepts and generics consider a command line program that can provide a message, have a default value and options.</p>
 <h2>Prompter - not the tele kind that is a trademark</h2>
-<pre><code class="nim hljs"><span class="hljs-keyword">type</span>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">type</span>
   <span class="hljs-type">Promptable</span> = <span class="hljs-keyword">concept</span> p, <span class="hljs-keyword">type</span> <span class="hljs-type">P</span>
-    <span class="hljs-keyword">var</span> str = <span class="hljs-string">&quot;&quot;</span>
     writeParam(p) <span class="hljs-comment"># Ensure a `writeParam` procedure takes an instance of this type</span>
-    parseInput(str, <span class="hljs-type">P</span>) <span class="hljs-keyword">is</span> <span class="hljs-type">P</span> <span class="hljs-comment"># Ensure there is a procedure that parses input returning `P`</span>
+    parseInput(<span class="hljs-keyword">var</span> <span class="hljs-built_in">string</span>, <span class="hljs-type">P</span>) <span class="hljs-keyword">is</span> <span class="hljs-type">P</span> <span class="hljs-comment"># Ensure there is a procedure that parses input returning `P`</span>
     p == p <span class="hljs-keyword">is</span> <span class="hljs-built_in">bool</span> <span class="hljs-comment"># We need to compare for `Defaultable`, best to be here</span>
 
   <span class="hljs-type">Defaultable</span> = <span class="hljs-keyword">concept</span> <span class="hljs-keyword">type</span> <span class="hljs-type">D</span>
@@ -182,7 +193,7 @@ Hopefully this starts the cogs spinning, but to look further in the capabilities
 <p>With these few concepts the world is ours!
 These allow the user to provide very basic proc for their types in a way that is quite ergonomic.
 Now implementing these is as simple as follows.</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> writeOptions[<span class="hljs-type">T</span>: <span class="hljs-type">Promptable</span>]() =
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> writeOptions[<span class="hljs-type">T</span>: <span class="hljs-type">Promptable</span>]() =
   <span class="hljs-keyword">mixin</span> writeParam, paramOptions, defaultParam <span class="hljs-comment"># Our generic interface procedures, mixin'd since we want users to override them</span>
   <span class="hljs-literal">stdout</span>.write <span class="hljs-string">'['</span>
   <span class="hljs-keyword">let</span>
@@ -224,7 +235,7 @@ Now implementing these is as simple as follows.</p>
 <p>The most interesting part of this entire setup is this lacks any assumption of the shape of the type that is used.
 Since the only operations used on the <code>Promptable</code> type are inside the concept there will never be an instantiation error.
 Finally the procedures can be implemented for a type, here a basic <code>bool</code> implementation lies:</p>
-<pre><code class="nim hljs"><span class="hljs-keyword">proc</span> paramOptions(_: typedesc[<span class="hljs-built_in">bool</span>]): <span class="hljs-built_in">auto</span> = [<span class="hljs-literal">true</span>, <span class="hljs-literal">false</span>]
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">proc</span> paramOptions(_: typedesc[<span class="hljs-built_in">bool</span>]): <span class="hljs-built_in">array</span>[<span class="hljs-number">2</span>, <span class="hljs-built_in">bool</span>] = [<span class="hljs-literal">true</span>, <span class="hljs-literal">false</span>]
 
 <span class="hljs-keyword">proc</span> writeParam(b: <span class="hljs-built_in">bool</span>) =
   <span class="hljs-literal">stdout</span>.write:
@@ -251,16 +262,9 @@ Finally the procedures can be implemented for a type, here a basic <code>bool</c
   <span class="hljs-keyword">else</span>:
     <span class="hljs-keyword">echo</span> <span class="hljs-string">&quot;Well you suck&quot;</span>
 <span class="hljs-keyword">except</span> <span class="hljs-type">PrompterError</span> <span class="hljs-keyword">as</span> e:
-  <span class="hljs-keyword">echo</span> e.msg</code></pre><pre class="nb-output"><samp>Do you like ice cream?  Good!</samp></pre>
-<script defer>/* Generated by the Nim Compiler v1.9.1 */
-var framePtr = null;
-var excHandler = 0;
-var lastJSError = null;
-var objectID_721420452 = [0];
-</script>
+  <span class="hljs-keyword">echo</span> e.msg</code></pre><pre class="nb-output">Do you like ice cream?  Good!</pre>
 </main>
 <footer>
-<hr>
 <div class="nb-box">
   <span><span class="nb-small">made with <a href="https://pietroppeter.github.io/nimib/">nimib 🐳</a></span></span>
   <span></span>
@@ -268,7 +272,7 @@ var objectID_721420452 = [0];
 </div>
 </footer>
 <section id="source">
-<pre><code class="nim hljs"><span class="hljs-keyword">import</span> nimib
+<pre><code class="nohighlight nim hljs"><span class="hljs-keyword">import</span> nimib
 <span class="hljs-keyword">import</span> std/[tables]
 
 nbInit
@@ -431,9 +435,8 @@ Hopefully this starts the cogs spinning, but to look further in the capabilities
 nbCode:
   <span class="hljs-keyword">type</span>
     <span class="hljs-type">Promptable</span> = <span class="hljs-keyword">concept</span> p, <span class="hljs-keyword">type</span> <span class="hljs-type">P</span>
-      <span class="hljs-keyword">var</span> str = <span class="hljs-string">&quot;&quot;</span>
       writeParam(p) <span class="hljs-comment"># Ensure a `writeParam` procedure takes an instance of this type</span>
-      parseInput(str, <span class="hljs-type">P</span>) <span class="hljs-keyword">is</span> <span class="hljs-type">P</span> <span class="hljs-comment"># Ensure there is a procedure that parses input returning `P`</span>
+      parseInput(<span class="hljs-keyword">var</span> <span class="hljs-built_in">string</span>, <span class="hljs-type">P</span>) <span class="hljs-keyword">is</span> <span class="hljs-type">P</span> <span class="hljs-comment"># Ensure there is a procedure that parses input returning `P`</span>
       p == p <span class="hljs-keyword">is</span> <span class="hljs-built_in">bool</span> <span class="hljs-comment"># We need to compare for `Defaultable`, best to be here</span>
 
     <span class="hljs-type">Defaultable</span> = <span class="hljs-keyword">concept</span> <span class="hljs-keyword">type</span> <span class="hljs-type">D</span>
@@ -499,8 +502,7 @@ Finally the procedures can be implemented for a type, here a basic `bool` implem
 &quot;&quot;&quot;</span>
 
 nbCode:
-
-  <span class="hljs-keyword">proc</span> paramOptions(_: typedesc[<span class="hljs-built_in">bool</span>]): <span class="hljs-built_in">auto</span> = [<span class="hljs-literal">true</span>, <span class="hljs-literal">false</span>]
+  <span class="hljs-keyword">proc</span> paramOptions(_: typedesc[<span class="hljs-built_in">bool</span>]): <span class="hljs-built_in">array</span>[<span class="hljs-number">2</span>, <span class="hljs-built_in">bool</span>] = [<span class="hljs-literal">true</span>, <span class="hljs-literal">false</span>]
 
   <span class="hljs-keyword">proc</span> writeParam(b: <span class="hljs-built_in">bool</span>) =
     <span class="hljs-literal">stdout</span>.write:

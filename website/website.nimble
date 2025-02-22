@@ -10,9 +10,5 @@ bin           = @["website"]
 
 # Dependencies
 requires "nim >= 1.5.1"
-switch("d", "js")
+requires "karax >= 1.3.3"
 
-task makeSite, "Makes the site dumbo":
-  exec("karun -d:danger ./src/website.nim")
-  mvFile("./app.html", "../index.html")
-  mvFile("./app.js", "../app.js")

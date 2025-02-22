@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <title>hcr.nim</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🐳</text></svg>">
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta content="nimib 0.3.12" name="generator">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css">
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/gh/pietroppeter/nimib/assets/androidstudio.css'>
+    <script src="https://cdn.jsdelivr.net/gh/pietroppeter/nimib@main/assets/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+.nb-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nb-small {
+  font-size: 0.8rem;
+}
+button.nb-small {
+  float: right;
+  padding: 2px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+section#source {
+  display:none
+}
+pre > code {
+  font-size: 1.2em;
+}
+.nb-output {
+  line-height: 1.15;
+}
+figure {
+  margin: 2rem 0;
+}
+figcaption {
+  text-align: center;
+}
+  
+</style>
+  
+</head>
+<body>
+<header>
+<div class="nb-box">
+  <span><a href=".">🏡</a></span>
+  <span><code>hcr.nim</code></span>
+  <span><a href="https://github.com/beef331/beef331.github.io"><svg aria-hidden="true" width="1.2em" height="1.2em" style="vertical-align: middle; fill: #fff" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a></span>
+</div>
+<hr>
+</header><main>
+<h1>Swapping the Sand for the Idol</h1>
+<p>Sometimes one makes a mistake.
+In some cases the mistake might be minor, but in the case of writing many compiled languages the mistake is often large.
+&quot;How can one recompile their code and keep state across reloads&quot; is a question that keeps people awake due to these rigid beasts.
+There are two paths that people generally take.
+The rosy road is gold encrusted and has a sign labelled &quot;scripting languages&quot;.
+Taking this road allows one to store their state in their main program and just run procedures across that data.
+Effectively preventing the issue of data persistence as the main code is never changed so no state needs migrated.
+Another remnant of a path diverges into the juaane trees.
+Overgrown and bush ridden it offers a different approach.
+Simply have a host program which loads a library then on source change reload the code and migrate the data.
+This will be the bushwacking journey across that path (moreover documenting what I went through with <a href="https://github.com/beef331/potato">potato</a>).</p>
+<h2>Basics of Reloading</h2>
+<p>The entire weight of relying on dynamic libraries to reload code of course relies on dynamic libraries.
+For the uninitiated a dynamic library is a bit of compiled code that has exposed symbols the loading program can access and call into.
+Consider how your OS can find <code>main</code> and invoke it to run a program.
+That is what will be replicated here, but instead of <code>main</code> it could be <code>potatoMain</code>.
+So the 'host' program really will be a simple daemon that watches over the dynamic library and calls into it.</p>
+<p>To start off the following code is what will be wrapped to be dynamically loaded</p>
+<pre><code class="nohighlight hljs nim"><span class="hljs-keyword">type</span> <span class="hljs-type">MyType</span> = <span class="hljs-keyword">object</span>
+  a, b: <span class="hljs-built_in">int</span>
+
+<span class="hljs-keyword">proc</span> doThing(typ: <span class="hljs-keyword">var</span> <span class="hljs-type">MyType</span>) = <span class="hljs-keyword">discard</span>
+
+<span class="hljs-keyword">var</span> myVal = <span class="hljs-type">MyType</span>(a: <span class="hljs-number">100</span>, b: <span class="hljs-number">20</span>)
+<span class="hljs-keyword">while</span> <span class="hljs-literal">true</span>:
+  doThing(myVal)</code></pre>
+<p>So in this case the desire is to replace the <code>while true</code> with the 'host' program.
+Really it is best to not rely on Nim's implicit <code>NimMain</code> invoke and move to a procedure.
+With that change it now is a simple.</p>
+<pre>hcrlib1</pre>
+<pre><code class=" hljs">## --app:lib
+
+type MyType = object
+  a, b: int
+
+proc doThing(typ: MyType) = echo &quot;Hello&quot;
+
+var myVal = MyType(a: 100, b: 20)
+
+proc potatoMain() {.exportc, dynlib.} = 
+  doThing(myVal)  
+</code></pre>
+
+<p>The astute will already have magnifying glasses on <code>{.exportc, dynlib.}</code>.
+<code>exportc</code> tells the Nim compiler not to mangle a procedure name and in this case it forces it to be named <code>potatoMain</code>.
+This allows other code rely on the name of this procedure.
+Secondly <code>dynlib</code> forces Nim(and by extension the C compiler) to keep the symbol alive even if it is not used.
+As this is intended to be a dynamic library together it means a <code>potatoMain</code> now resides in the symbol table of the shared library.</p>
+<p>With this as the studded plastic block the path forward depends upon a host program.
+For now this host program will just be a hard coded &quot;load a dynamic library at this path&quot;.</p>
+<pre>hcrhost1</pre>
+<pre><code class=" hljs">import std/[dynlib, os, times]
+
+type PotatoProc = proc(){.cdecl.}
+
+const dynamicLibExt =
+  when defined(windows):
+    &quot;dll&quot;
+  elif defined(linux):
+    &quot;so&quot;
+  elif defined(macos):
+    &quot;dylib&quot;
+  else:
+    {.error: &quot;Unsupported OS&quot;.}
+
+
+proc asDynamicLib(s: string): string =
+  s.changeFileExt(dynamicLibExt)
+
+const libPath = &quot;libmylib&quot;.asDynamicLib()
+
+var 
+  lib = LibHandle nil 
+  modTime = Time() 
+  prc = PotatoProc nil
+
+while true:
+  let newModTime = 
+    try:
+      getLastModificationTime(libPath)
+    except CatchableError as e:
+      echo e.msg
+      Time()
+
+  if newModTime != modTime:
+    try:
+      lib = loadLib(libPath)
+      prc = cast[PotatoProc](lib.symAddr(&quot;potatoMain&quot;))
+      echo &quot;Loaded new lib&quot;
+    except CatchableError as e:
+      echo e.msg
+    modTime = newModTime
+
+  if lib != nil and prc != nil:
+    echo &quot;Invoke potatoMain&quot;
+    prc()
+</code></pre>
+
+<p>Just like that and the most simple version of hot code reload is done!
+At this point some may just call it a plugin system since it can just reload any shared library named <code>libmylib</code>.
+Though if following along one may notice that nothing actually happens.
+Nothing is actually called.</p>
+</main>
+<footer>
+<div class="nb-box">
+  <span><span class="nb-small">made with <a href="https://pietroppeter.github.io/nimib/">nimib 🐳</a></span></span>
+  <span></span>
+  <span><button class="nb-small" id="show" onclick="toggleSourceDisplay()">Show Source</button></span>
+</div>
+</footer>
+<section id="source">
+<pre><code class="nohighlight nim hljs"><span class="hljs-keyword">import</span> nimib
+<span class="hljs-keyword">import</span> std/[tables, os]
+
+nbInit
+nb.darkMode()
+
+<span class="hljs-keyword">proc</span> nbCodePath(name: <span class="hljs-built_in">string</span>) =
+  nbFile(name.changeFileExt(<span class="hljs-string">&quot;&quot;</span>), readFile(name))
+
+<span class="hljs-string">nbText&quot;&quot;&quot;
+# Swapping the Sand for the Idol
+
+Sometimes one makes a mistake.
+In some cases the mistake might be minor, but in the case of writing many compiled languages the mistake is often large.
+&quot;How can one recompile their code and keep state across reloads&quot; is a question that keeps people awake due to these rigid beasts.
+There are two paths that people generally take.
+The rosy road is gold encrusted and has a sign labelled &quot;scripting languages&quot;.
+Taking this road allows one to store their state in their main program and just run procedures across that data.
+Effectively preventing the issue of data persistence as the main code is never changed so no state needs migrated.
+Another remnant of a path diverges into the juaane trees.
+Overgrown and bush ridden it offers a different approach.
+Simply have a host program which loads a library then on source change reload the code and migrate the data.
+This will be the bushwacking journey across that path (moreover documenting what I went through with [potato](https://github.com/beef331/potato)).
+
+## Basics of Reloading
+
+The entire weight of relying on dynamic libraries to reload code of course relies on dynamic libraries.
+For the uninitiated a dynamic library is a bit of compiled code that has exposed symbols the loading program can access and call into.
+Consider how your OS can find `main` and invoke it to run a program.
+That is what will be replicated here, but instead of `main` it could be `potatoMain`.
+So the 'host' program really will be a simple daemon that watches over the dynamic library and calls into it.
+
+To start off the following code is what will be wrapped to be dynamically loaded
+&quot;&quot;&quot;</span>
+
+nbCodeSkip:
+  <span class="hljs-keyword">type</span> <span class="hljs-type">MyType</span> = <span class="hljs-keyword">object</span>
+    a, b: <span class="hljs-built_in">int</span>
+
+  <span class="hljs-keyword">proc</span> doThing(typ: <span class="hljs-keyword">var</span> <span class="hljs-type">MyType</span>) = <span class="hljs-keyword">discard</span>
+
+  <span class="hljs-keyword">var</span> myVal = <span class="hljs-type">MyType</span>(a: <span class="hljs-number">100</span>, b: <span class="hljs-number">20</span>)
+  <span class="hljs-keyword">while</span> <span class="hljs-literal">true</span>:
+    doThing(myVal)    
+
+
+
+<span class="hljs-string">nbText&quot;&quot;&quot;
+So in this case the desire is to replace the `while true` with the 'host' program.
+Really it is best to not rely on Nim's implicit `NimMain` invoke and move to a procedure.
+With that change it now is a simple.
+
+&quot;&quot;&quot;</span>
+
+<span class="hljs-string">nbCodePath&quot;hcrlib1.nim&quot;</span>
+
+
+
+<span class="hljs-string">nbText&quot;&quot;&quot;
+The astute will already have magnifying glasses on `{.exportc, dynlib.}`.
+`exportc` tells the Nim compiler not to mangle a procedure name and in this case it forces it to be named `potatoMain`.
+This allows other code rely on the name of this procedure.
+Secondly `dynlib` forces Nim(and by extension the C compiler) to keep the symbol alive even if it is not used.
+As this is intended to be a dynamic library together it means a `potatoMain` now resides in the symbol table of the shared library.
+
+With this as the studded plastic block the path forward depends upon a host program.
+For now this host program will just be a hard coded &quot;load a dynamic library at this path&quot;.
+&quot;&quot;&quot;</span>
+
+<span class="hljs-string">nbCodePath&quot;hcrhost1.nim&quot;</span> 
+
+<span class="hljs-string">nbText&quot;&quot;&quot;
+Just like that and the most simple version of hot code reload is done!
+At this point some may just call it a plugin system since it can just reload any shared library named `libmylib`.
+Though if following along one may notice that nothing actually happens.
+Nothing is actually called.
+&quot;&quot;&quot;</span>
+
+
+
+nbSave()
+</code></pre>
+</section><script>
+function toggleSourceDisplay() {
+  var btn = document.getElementById("show")
+  var source = document.getElementById("source");
+  if (btn.innerHTML=="Show Source") {
+    btn.innerHTML = "Hide Source";
+    source.style.display = "block";
+  } else {
+    btn.innerHTML = "Show Source";
+    source.style.display = "none";
+  }
+}
+</script></body>
+</html>
