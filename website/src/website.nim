@@ -235,25 +235,22 @@ proc makeWriteups(): VNode =
 proc makeDom(page: Pages): VNode =
   #document.title = "Jason Beetham"
   #parseUrl()
-  buildhtml:
-    section:
-      let header = makeHead()
-      header
-      body:
-        makeNavBar(page)
-        video(class = "backVideo", autoplay = "", muted = "", loop = ""):
-          source(src = "/videos/backvideo.mp4", fetchpriority="low")
-        tdiv(class = "wrapper"):
-          case page:
-          of home:
-            makeProjects()
-          of showcase:
-            makeShowcase()
-          of writeups:
-            makeWriteups()
-
+  result = tree(html)
+  result.add makeHead()
+  result.add:
+    buildhtml(body):
+      makeNavBar(page)
+      video(class = "backVideo", autoplay = "", muted = "", loop = ""):
+        source(src = "/videos/backvideo.mp4", fetchpriority="low")
+      tdiv(class = "wrapper"):
+        case page:
+        of home:
+          makeProjects()
+        of showcase:
+          makeShowcase()
+        of writeups:
+          makeWriteups()
       makeFooter()
-
 
 for page in Pages:
   writeFile($page, $makeDom(page))
