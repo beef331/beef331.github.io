@@ -2,6 +2,7 @@ import nimib
 import std/[tables]
 
 nbInit
+nb.context["path_to_root"] = "../writeups.html"
 nb.darkMode()
 
 nbText"""

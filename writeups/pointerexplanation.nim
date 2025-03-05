@@ -1,5 +1,7 @@
 import nimib
 nbInit()
+nb.context["path_to_root"] = "../writeups.html"
+
 nb.darkMode()
 nb.title = "Nim - Pointer, confusing scary and over there."
 nbText:"""
@@ -196,6 +198,7 @@ nbCode:
   {.emit:"""
 
 // Get a dynamically allocated integer buffer
+#include <stdlib.h>
 int* getIntBuff(int* len){
   int* buff = malloc(5 * sizeof(int));
   for(int i = 0; i < 5; i++){
