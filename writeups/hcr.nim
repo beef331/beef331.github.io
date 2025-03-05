@@ -1,5 +1,6 @@
 import nimib
 nbInit()
+nb.context["path_to_root"] = "../writeups.html"
 
 nb.darkMode()
 nb.title = "So you want to write hot code reload, eh?"
