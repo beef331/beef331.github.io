@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <title>So you want to write hot code reload, eh?</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🐳</text></svg>">
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta content="nimib 0.3.12" name="generator">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.min.css">
+  <link rel='stylesheet' href='https://cdn.jsdelivr.net/gh/pietroppeter/nimib/assets/androidstudio.css'>
+    <script src="https://cdn.jsdelivr.net/gh/pietroppeter/nimib@main/assets/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+
+  <style>
+.nb-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nb-small {
+  font-size: 0.8rem;
+}
+button.nb-small {
+  float: right;
+  padding: 2px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+section#source {
+  display:none
+}
+pre > code {
+  font-size: 1.2em;
+}
+.nb-output {
+  line-height: 1.15;
+}
+figure {
+  margin: 2rem 0;
+}
+figcaption {
+  text-align: center;
+}
+  
+</style>
+  
+</head>
+<body>
+<header>
+<div class="nb-box">
+  <span><a href="www.jasonbeetham.ca/writeups">🏡</a></span>
+  <span><code>hcr.nim</code></span>
+  <span><a href="https://github.com/beef331/beef331.github.io"><svg aria-hidden="true" width="1.2em" height="1.2em" style="vertical-align: middle; fill: #fff" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a></span>
+</div>
+<hr>
+</header><main>
+<h1>It is not hot it is atleast lukewarm</h1>
+<p>One of the most desirable features of a game development environment is the abillity to change code and see the changes live.
+Vexxing many game developers use a statically typed compiled language to program games making hot code reload require work.
+As someone that went thought the work this documents the journey across the <a href="https://www.github.com/beef331/potato">potato</a> fields.</p>
+<h2>Dynamic libraries - I swear they just keep moving on me.</h2>
+<p>For those not in the know a dynamic library is a compiled blob of code that you can load at runtime.
+Enabling both the abillity to add new code and to replace implementations.
+They have a symbol table which lets users search for and access procedures and variables once loaded.
+It is this which will allow us to write hot code reload.</p>
+<pre>hcr1host.nim</pre>
+<pre><code class="nim hljs">import std/dynlib
+
+type Entry = proc() {.cdecl.}
+
+var lib = loadLib(&quot;./libhcr.so&quot;)
+let entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
+entry()
+</code></pre>
+
+<pre>hcr1lib.nim</pre>
+<pre><code class="nim hljs">proc entry() {.exportc, dynlib.} = echo &quot;Hello&quot;
+</code></pre>
+
+<pre>hcr1lib.nims</pre>
+<pre><code class="nims hljs">--app:lib
+
+when defined(linux):
+  --o:&quot;libhcr.so&quot;
+elif defined(windows):
+  --o:&quot;libhcr.dll&quot;
+else:
+  --o:&quot;libhcr.dylib&quot;
+</code></pre>
+
+<p>This is a basic program with a pluggable function.
+When <code>hcr1host</code> runs it loads the library <code>./libhcr.so</code> then it calls the <code>entry</code> procedure declared there.
+Those smart enough to always plug in a USB type-A first try can see where this takes us.
+The first step to that quest is to have a loop that watches the file.
+Here cause I prefer brevity will resort to a simple watcher(A cross platform solution that will make anyone knowledgable cry and even whimper.).</p>
+<pre>hcr2host.nim</pre>
+<pre><code class="nim hljs">import std/[dynlib, times, os]
+
+type Entry = proc() {.cdecl.}
+
+const libPath = 
+  when defined(linux):
+    &quot;./libhcr.so&quot;
+  elif defined(windows):
+    &quot;./libhcr.dll&quot;
+  else:
+    &quot;./libhcr.dylib&quot;
+
+
+
+var lastLoad = default Time
+
+while true:
+  let thisLoad = 
+    try:
+      getLastModificationTime(libPath)
+    except CatchableError:
+      continue
+
+
+  if lastLoad &lt; thisLoad:
+    lastLoad = thisLoad
+    var lib =
+      try:
+        loadLib(libPath)
+      except CatchableError as e:
+        echo &quot;Failed to load dynamic library: &quot;, e.msg
+        continue
+
+    if lib == nil:
+      echo &quot;Failed to load lib: &quot;, libPath
+    else:
+      let entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
+      if entry == nil:
+        echo &quot;No function named 'entry'&quot;
+        if lib != nil:
+          lib.unloadLib()
+        continue
+      entry()
+      lib.unloadLib()
+
+</code></pre>
+
+<p>With this one can modify the <code>hcr1lib.nim</code> and recompile it and without closing <code>hcr2host</code> will see a live change.
+Tinkering with it you may notice a problem that sticks out like a toe in a ripped sock.
+Nothing persists on reload.</p>
+<pre>hcr2lib.nim</pre>
+<pre><code class="nim hljs">var i = 0
+proc entry() {.exportc, dynlib.} =
+  inc i
+  echo i 
+</code></pre>
+
+<p>Using this as the library every reload prints <code>1</code> and it does not persist.
+This means one needs to store global state somehow... the best way of doing that is you guessed it dynamic symbols!
+Not only does a dynamic library add to a symbol table the host program also does.
+To do this one needs to invent a <code>saveInt</code> procedure which lets the library save and reload state.
+Though a cookie jar is only good for storage cause you can get cookies out which means it also needs a <code>getInt</code> procedure to fetch the value stored.</p>
+<pre>hcr3host.nim</pre>
+<pre><code class="nim hljs">import std/[dynlib, times, os, tables]
+
+{.passc: &quot;-rdynamic&quot;, passL: &quot;-rdynamic&quot;.} ## Needed so we can access symbols from children
+
+type Entry = proc() {.cdecl.}
+
+const libPath = 
+  when defined(linux):
+    &quot;./libhcr.so&quot;
+  elif defined(windows):
+    &quot;./libhcr.dll&quot;
+  else:
+    &quot;./libhcr.dylib&quot;
+
+var ints: Table[string, int]
+
+proc saveInt(name: string, i: int) {.exportc, dynlib, raises: [].} =
+  ints[name] = i
+
+proc getInt(name: string, i: var int) : bool {.exportc, dynlib, raises: [].} =
+  if name in ints:
+    try:
+      i = ints[name]
+      true
+    except CatchableError:
+      false
+  else:
+    false
+
+
+var lastLoad = default Time
+
+while true:
+  let thisLoad = 
+    try:
+      getLastModificationTime(libPath)
+    except CatchableError:
+      continue
+
+
+  if lastLoad &lt; thisLoad:
+    lastLoad = thisLoad
+    var lib =
+      try:
+        loadLib(libPath)
+      except CatchableError as e:
+        echo &quot;Failed to load dynamic library: &quot;, e.msg
+        continue
+
+    if lib == nil:
+      echo &quot;Failed to load lib: &quot;, libPath
+    else:
+      let entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
+      if entry == nil:
+        echo &quot;No function named 'entry'&quot;
+        if lib != nil:
+          lib.unloadLib()
+        continue
+      entry()
+      lib.unloadLib()
+
+</code></pre>
+
+<p>Nim specific but exceptions do not raise across dynamic library barriers so it is best to return a bool as we do here.
+This allows the reloading code to set a default value if we do not load.
+With C <code>-rdynamic</code> is required to be able to access the host procedures from the dynamic library</p>
+<pre>hcr3lib.nim</pre>
+<pre><code class="nim hljs">proc saveInt(name: string, val: int) {.importc, dynlib&quot;&quot;.}
+proc getInt(name: string, val: var int): bool {.importc, dynlib&quot;&quot;.}
+
+var i = 0
+if not getInt(&quot;i&quot;, i):
+  i = 0 # Redundant but let's stay classy 
+
+proc entry() {.exportc, dynlib.} =
+  inc i
+  echo i
+  saveInt(&quot;i&quot;, i)
+</code></pre>
+
+<p>More Nim specific details <code>dynlib</code> loads using <code>dlopen</code> which means we can supply <code>&quot;&quot;</code> and it will load from this program's symbol table.
+In less nerdy POSIX talk it means it will load <code>getInt</code> and <code>setInt</code> from the host program.</p>
+<p>With all this now one can easily replace their dynamic library and now they can reload integers!
+This can be expanded to use tagged unions instead to enable storing more complex state(infact in potato deeply nested structures save just fine!)</p>
+</main>
+<footer>
+<div class="nb-box">
+  <span><span class="nb-small">made with <a href="https://pietroppeter.github.io/nimib/">nimib 🐳</a></span></span>
+  <span></span>
+  <span><button class="nb-small" id="show" onclick="toggleSourceDisplay()">Show Source</button></span>
+</div>
+</footer>
+<section id="source">
+<pre><code class="nohighlight nim hljs"><span class="hljs-keyword">import</span> nimib
+nbInit()
+
+
+nb.context[<span class="hljs-string">&quot;path_to_root&quot;</span>] = <span class="hljs-string">&quot;www.jasonbeetham.ca/writeups&quot;</span>
+
+nb.darkMode()
+nb.title = <span class="hljs-string">&quot;So you want to write hot code reload, eh?&quot;</span>
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+# It is not hot it is atleast lukewarm
+
+One of the most desirable features of a game development environment is the abillity to change code and see the changes live.
+Vexxing many game developers use a statically typed compiled language to program games making hot code reload require work.
+As someone that went thought the work this documents the journey across the [potato](https://www.github.com/beef331/potato) fields.
+
+## Dynamic libraries - I swear they just keep moving on me.
+
+For those not in the know a dynamic library is a compiled blob of code that you can load at runtime.
+Enabling both the abillity to add new code and to replace implementations.
+They have a symbol table which lets users search for and access procedures and variables once loaded.
+It is this which will allow us to write hot code reload.
+&quot;&quot;&quot;</span>
+
+<span class="hljs-keyword">proc</span> nbFile(name: <span class="hljs-built_in">string</span>) =
+  nbFile(name, readFile(name))
+
+
+nbFile(<span class="hljs-string">&quot;hcr1host.nim&quot;</span>)
+nbFile(<span class="hljs-string">&quot;hcr1lib.nim&quot;</span>)
+nbFile(<span class="hljs-string">&quot;hcr1lib.nims&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+This is a basic program with a pluggable function.
+When `hcr1host` runs it loads the library `./libhcr.so` then it calls the `entry` procedure declared there.
+Those smart enough to always plug in a USB type-A first try can see where this takes us.
+The first step to that quest is to have a loop that watches the file.
+Here cause I prefer brevity will resort to a simple watcher(A cross platform solution that will make anyone knowledgable cry and even whimper.).
+&quot;&quot;&quot;</span>
+
+nbFile(<span class="hljs-string">&quot;hcr2host.nim&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+With this one can modify the `hcr1lib.nim` and recompile it and without closing `hcr2host` will see a live change.
+Tinkering with it you may notice a problem that sticks out like a toe in a ripped sock.
+Nothing persists on reload.
+&quot;&quot;&quot;</span>
+
+nbFile(<span class="hljs-string">&quot;hcr2lib.nim&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+Using this as the library every reload prints `1` and it does not persist.
+This means one needs to store global state somehow... the best way of doing that is you guessed it dynamic symbols!
+Not only does a dynamic library add to a symbol table the host program also does.
+To do this one needs to invent a `saveInt` procedure which lets the library save and reload state.
+Though a cookie jar is only good for storage cause you can get cookies out which means it also needs a `getInt` procedure to fetch the value stored.
+&quot;&quot;&quot;</span>
+
+nbFile(<span class="hljs-string">&quot;hcr3host.nim&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+Nim specific but exceptions do not raise across dynamic library barriers so it is best to return a bool as we do here.
+This allows the reloading code to set a default value if we do not load.
+With C `-rdynamic` is required to be able to access the host procedures from the dynamic library
+&quot;&quot;&quot;</span>
+
+nbFile(<span class="hljs-string">&quot;hcr3lib.nim&quot;</span>)
+
+nbText:<span class="hljs-string">&quot;&quot;&quot;
+More Nim specific details `dynlib` loads using `dlopen` which means we can supply `&quot;&quot;` and it will load from this program's symbol table.
+In less nerdy POSIX talk it means it will load `getInt` and `setInt` from the host program.
+
+With all this now one can easily replace their dynamic library and now they can reload integers!
+This can be expanded to use tagged unions instead to enable storing more complex state(infact in potato deeply nested structures save just fine!)
+&quot;&quot;&quot;</span>
+
+nbSave()
+</code></pre>
+</section><script>
+function toggleSourceDisplay() {
+  var btn = document.getElementById("show")
+  var source = document.getElementById("source");
+  if (btn.innerHTML=="Show Source") {
+    btn.innerHTML = "Hide Source";
+    source.style.display = "block";
+  } else {
+    btn.innerHTML = "Show Source";
+    source.style.display = "none";
+  }
+}
+</script></body>
+</html>
