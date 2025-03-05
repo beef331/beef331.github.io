@@ -224,12 +224,8 @@ proc makeWriteups(): VNode =
         let (_, name, ext) = file.path.splitFile
         if ext == ".html":
           li(class = "writeups"):
-            let id = "writeup-button" & $i
-            input(id = id, class = "writeup-button", type = "checkbox")
-            label( `for` = id, class = "fas"):
-              text name
-            iframe(class = "writeup", src = file.path)
-            hr()
+            a(href = file.path):
+              h2 text name
 
 
 proc makeDom(page: Pages): VNode =
