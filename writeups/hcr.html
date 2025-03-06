@@ -240,7 +240,245 @@ proc entry() {.exportc, dynlib.} =
 <p>More Nim specific details <code>dynlib</code> loads using <code>dlopen</code> which means we can supply <code>&quot;&quot;</code> and it will load from this program's symbol table.
 In less nerdy POSIX talk it means it will load <code>getInt</code> and <code>setInt</code> from the host program.</p>
 <p>With all this now one can easily replace their dynamic library and now they can reload integers!
-This can be expanded to use tagged unions instead to enable storing more complex state(infact in potato deeply nested structures save just fine!)</p>
+This can be expanded to use tagged unions instead to enable storing more complex state(infact in Potato deeply nested structures save just fine!)</p>
+<h2>Serialization</h2>
+<p>The heart of storing state across reloads is ensuring the old data can be migrated to the new with new fields added.
+In this case it means one will one to use a tagged union across primitives.
+Which means <code>int</code>, <code>float</code>, <code>string</code>, an array type, and finally a structure type.</p>
+<pre><code class="language-nim">import std/tables
+
+type
+  HcrKind = enum
+    Int
+    Float
+    String
+    Array
+    Struct
+
+  HcrObj = object
+    case kind: HcrKind
+    of Int:
+      i: int
+    of Float:
+      f: float
+    of String:
+      s: string
+    of Array:
+      arr: seq[HcrObj]
+    of Struct:
+      fields: Table[string, HcrObj]
+</code></pre>
+<p>This data type is sufficient to store every type under the sun (though in the case of Potato <code>std/json.JsonNode</code> is just used).
+To enable support of reference types all data of a structure type should be stored to a root level <code>HcrObj</code> where the entry object is at a field named <code>data</code>.
+This allows storing references in the top level using their old pointer value as a field name.</p>
+<p>With that the following is how mapping between types works:</p>
+<ul>
+<li>Any integer, enum, char, or bool maps to <code>Int</code></li>
+<li>32bit and 64bit floats map to <code>Float</code></li>
+<li><code>string</code> maps to <code>String</code></li>
+<li><code>ptr T</code>, <code>pointer</code>, and <code>proc</code> map to <code>Int</code></li>
+<li><code>ref T</code> stores as an <code>Int</code> in place. Though adds to the root object's fields at its old pointer value. On load a table of the old pointer to new must be stored to migrate to new pointers.</li>
+<li><code>seq[T]</code> and <code>array[Idx, T]</code> map to <code>Array</code></li>
+<li><code>set[T]</code> maps to <code>String</code> just allocated a string and copy the memory over</li>
+<li><code>object</code> and <code>tuple</code> map to <code>Struct</code>, iterate the fields and store to <code>fields</code></li>
+</ul>
+<p>It is also very important to note that since pointers are assumed to be valid after reload the old library must not be unloaded.
+This will leak memory but it also ensures the pointers are still pointing to alive data.</p>
+<p>One should also create a list of serializers to store all global variables to the host program.</p>
+<pre><code class="language-nim"># Inside the library
+var serializers: seq[proc()]
+proc hcrSave() {.exportc, dynlib.} =
+  for serializer in serializers:
+    serializer()
+
+var someInt = 0
+serializers.add proc() =
+  saveInt(&quot;someInt&quot;, someInt)
+</code></pre>
+<p>This can then be called before reload in the host to save state allowing migration</p>
+<h2>Signals</h2>
+<p>If loaded program crashes one should not have to relaunch the program.
+It likely should continue where it left off rerunning the frame.
+To achieve this one can use signal handlers to call a <code>hcrError</code> procedure from the host program.
+This <code>hcrError</code> will use <code>siglongjmp</code> to return the program back to before the loop was called and let the program continue again.</p>
+<pre>hcr4host.nim</pre>
+<pre><code class="nim hljs">import std/[dynlib, times, os, tables]
+import system/ansi_c
+
+{.passc: &quot;-rdynamic&quot;, passL: &quot;-rdynamic&quot;.} ## Needed so we can access symbols from children
+
+type Entry = proc() {.cdecl.}
+
+const libPath = 
+  when defined(linux):
+    &quot;./libhcr.so&quot;
+  elif defined(windows):
+    &quot;./libhcr.dll&quot;
+  else:
+    &quot;./libhcr.dylib&quot;
+
+var ints: Table[string, int]
+
+proc saveInt(name: string, i: int) {.exportc, dynlib, raises: [].} =
+  ints[name] = i
+
+proc getInt(name: string, i: var int) : bool {.exportc, dynlib, raises: [].} =
+  if name in ints:
+    try:
+      i = ints[name]
+      true
+    except CatchableError:
+      false
+  else:
+    false
+
+const
+  ErrorJump = 1
+  QuitJump = 2
+
+type sigjmp_buf {.bycopy, importc: &quot;sigjmp_buf&quot;, header: &quot;&lt;setjmp.h&gt;&quot;.} =  object
+
+proc sigsetjmp(jmpb: C_JmpBuf, savemask: cint): cint {.header: &quot;&lt;setjmp.h&gt;&quot;, importc: &quot;sigsetjmp&quot;.}
+proc siglongjmp(jmpb: C_JmpBuf, retVal: cint) {.header: &quot;&lt;setjmp.h&gt;&quot;, importc: &quot;siglongjmp&quot;.}
+
+var jmp: C_JmpBuf
+
+proc hcrError() {.exportc, dynlib.} =
+  siglongjmp(jmp, ErrorJump)
+
+proc hcrQuit() {.exportc, dynlib.} =
+  siglongjmp(jmp, QuitJump)
+
+
+var 
+  lastLoad = default Time
+  crashed = false
+
+while true:
+  let thisLoad = 
+    try:
+      getLastModificationTime(libPath)
+    except CatchableError:
+      continue
+
+
+  if lastLoad &lt; thisLoad:
+    lastLoad = thisLoad
+    var lib =
+      try:
+        loadLib(libPath)
+      except CatchableError as e:
+        echo &quot;Failed to load dynamic library: &quot;, e.msg
+        continue
+
+    if lib == nil:
+      echo &quot;Failed to load lib: &quot;, libPath
+    else:
+      let entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
+      if entry == nil:
+        echo &quot;No function named 'entry'&quot;
+        if lib != nil:
+          lib.unloadLib()
+        continue
+      case sigsetjmp(jmp, int32.high.cint)
+      of 0:
+        entry()
+      of ErrorJump:
+        crashed = true
+        echo &quot;Crashed&quot;
+      of QuitJump:
+        break
+      else:
+        echo &quot;Incorrect jump&quot;
+      # lib.unloadLib() # We no longer want to free memory we allocated as pointers may outlast the shared library
+
+</code></pre>
+
+<pre>hcr4lib.nim</pre>
+<pre><code class="nim hljs">import system/ansi_c
+proc hcrError() {.importc, dynlib&quot;&quot;.}
+proc hcrQuit() {.importc, dynlib&quot;&quot;.}
+
+unhandledExceptionHook = proc(e: ref Exception) {.nimcall, gcsafe, raises: [], tags: [].}=
+  try:
+    {.cast(tags: []).}:
+      for i, x in e.getStackTraceEntries:
+        stdout.write x.fileName, &quot;(&quot;, x.line, &quot;) &quot;, x.procName
+        stdout.write &quot;\n&quot;
+      stdout.write&quot;Error: &quot;
+      stdout.writeLine e.msg
+      stdout.flushFile()
+      hcrError()
+  except:
+    discard
+
+
+{.push stackTrace:off.}
+proc signalHandler(sign: cint) {.noconv.} =
+  if sign == SIGINT:
+    hcrQuit()
+    hcrError()
+  elif sign == SIGSEGV:
+    writeStackTrace()
+    echo &quot;SIGSEGV: Illegal storage access. (Attempt to read from nil?)&quot;
+    hcrError()
+  elif sign == SIGABRT:
+    writeStackTrace()
+    echo &quot;SIGABRT: Abnormal termination.&quot;
+    hcrError()
+  elif sign == SIGFPE:
+    writeStackTrace()
+    echo &quot;SIGFPE: Arithmetic error.&quot;
+    hcrError()
+  elif sign == SIGILL:
+    writeStackTrace()
+    echo &quot;SIGILL: Illegal operation.&quot;
+    hcrError()
+  elif (when declared(SIGBUS): sign == SIGBUS else: false):
+    echo &quot;SIGBUS: Illegal storage access. (Attempt to read from nil?)&quot;
+    hcrError()
+{.pop.}
+
+#c_signal(SIGINT, signalHandler)
+c_signal(SIGSEGV, signalHandler)
+c_signal(SIGABRT, signalHandler)
+c_signal(SIGFPE, signalHandler)
+c_signal(SIGILL, signalHandler)
+when declared(SIGBUS):
+  c_signal(SIGBUS, signalHandler)
+
+
+
+proc saveInt(name: string, val: int) {.importc, dynlib&quot;&quot;.}
+proc getInt(name: string, val: var int): bool {.importc, dynlib&quot;&quot;.}
+
+var i = 0
+if not getInt(&quot;i&quot;, i):
+  i = 0 # Redundant but let's stay classy 
+
+proc entry() {.exportc, dynlib.} =
+  inc i
+  echo i
+  saveInt(&quot;i&quot;, i)
+  if i &gt;= 10:
+    hcrQuit() # Leave this place
+</code></pre>
+
+<pre>hcr4lib.nims</pre>
+<pre><code class="nims hljs">--app:lib
+--nimMainPrefix:&quot;hcr&quot;
+when defined(linux):
+  --o:&quot;libhcr.so&quot;
+elif defined(windows):
+  --o:&quot;libhcr.dll&quot;
+else:
+  --o:&quot;libhcr.dylib&quot;
+</code></pre>
+
+<h2>Closing</h2>
+<p>Thanks for reading.
+More information can be found by reading the source code of <a href="https://github.com/beef331/potato">Potato</a>.
+Including things not touched on here like how to use a single module for both the host and library.</p>
 </main>
 <footer>
 <div class="nb-box">
@@ -320,7 +558,93 @@ More Nim specific details `dynlib` loads using `dlopen` which means we can suppl
 In less nerdy POSIX talk it means it will load `getInt` and `setInt` from the host program.
 
 With all this now one can easily replace their dynamic library and now they can reload integers!
-This can be expanded to use tagged unions instead to enable storing more complex state(infact in potato deeply nested structures save just fine!)
+This can be expanded to use tagged unions instead to enable storing more complex state(infact in Potato deeply nested structures save just fine!)
+
+## Serialization
+
+The heart of storing state across reloads is ensuring the old data can be migrated to the new with new fields added.
+In this case it means one will one to use a tagged union across primitives.
+Which means `int`, `float`, `string`, an array type, and finally a structure type.
+
+```nim
+import std/tables
+
+type
+  HcrKind = enum
+    Int
+    Float
+    String
+    Array
+    Struct
+
+  HcrObj = object
+    case kind: HcrKind
+    of Int:
+      i: int
+    of Float:
+      f: float
+    of String:
+      s: string
+    of Array:
+      arr: seq[HcrObj]
+    of Struct:
+      fields: Table[string, HcrObj]
+```  
+
+
+This data type is sufficient to store every type under the sun (though in the case of Potato `std/json.JsonNode` is just used).
+To enable support of reference types all data of a structure type should be stored to a root level `HcrObj` where the entry object is at a field named `data`.
+This allows storing references in the top level using their old pointer value as a field name.
+
+
+With that the following is how mapping between types works:
+
+- Any integer, enum, char, or bool maps to `Int`
+- 32bit and 64bit floats map to `Float`
+- `string` maps to `String`
+- `ptr T`, `pointer`, and `proc` map to `Int`
+- `ref T` stores as an `Int` in place. Though adds to the root object's fields at its old pointer value. On load a table of the old pointer to new must be stored to migrate to new pointers.
+- `seq[T]` and `array[Idx, T]` map to `Array`
+- `set[T]` maps to `String` just allocated a string and copy the memory over
+- `object` and `tuple` map to `Struct`, iterate the fields and store to `fields`
+
+It is also very important to note that since pointers are assumed to be valid after reload the old library must not be unloaded.
+This will leak memory but it also ensures the pointers are still pointing to alive data.
+
+One should also create a list of serializers to store all global variables to the host program.
+
+```nim
+# Inside the library
+var serializers: seq[proc()]
+proc hcrSave() {.exportc, dynlib.} =
+  for serializer in serializers:
+    serializer()
+
+var someInt = 0
+serializers.add proc() =
+  saveInt(&quot;someInt&quot;, someInt)
+```
+This can then be called before reload in the host to save state allowing migration
+
+
+## Signals
+
+If loaded program crashes one should not have to relaunch the program.
+It likely should continue where it left off rerunning the frame.
+To achieve this one can use signal handlers to call a `hcrError` procedure from the host program.
+This `hcrError` will use `siglongjmp` to return the program back to before the loop was called and let the program continue again.
+
+&quot;&quot;&quot;</span>
+
+nbFile(<span class="hljs-string">&quot;hcr4host.nim&quot;</span>)
+nbFile(<span class="hljs-string">&quot;hcr4lib.nim&quot;</span>)
+nbFile(<span class="hljs-string">&quot;hcr4lib.nims&quot;</span>)
+
+<span class="hljs-string">nbText&quot;&quot;&quot;
+## Closing
+Thanks for reading.
+More information can be found by reading the source code of [Potato](https://github.com/beef331/potato).
+Including things not touched on here like how to use a single module for both the host and library.
 &quot;&quot;&quot;</span>
 
 nbSave()
