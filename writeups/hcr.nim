@@ -119,7 +119,7 @@ With that the following is how mapping between types works:
 - `ptr T`, `pointer`, and `proc` map to `Int`
 - `ref T` stores as an `Int` in place. Though adds to the root object's fields at its old pointer value. On load a table of the old pointer to new must be stored to migrate to new pointers.
 - `seq[T]` and `array[Idx, T]` map to `Array`
-- `set[T]` maps to `String` just allocated a string and copy the memory over
+- `set[T]` maps to `String` just allocate a string which is `sizeof(set[T]))` and copy the memory over
 - `object` and `tuple` map to `Struct`, iterate the fields and store to `fields`
 
 It is also very important to note that since pointers are assumed to be valid after reload the old library must not be unloaded.
