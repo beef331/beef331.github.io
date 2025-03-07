@@ -11,7 +11,7 @@ nb.title = "So you want to write hot code reload, eh?"
 nbText:"""
 # It is not hot it is atleast lukewarm
 
-One of the most desirable features of a game development environment is the abillity to change code and see the changes live.
+One of the most desirable features of a game development environment is the ability to change code and see the changes live.
 Vexingly many game developers use a statically typed compiled language making hot code reload more difficult.
 As someone that went though the work this documents the journey across the [potato](https://www.github.com/beef331/potato) fields.
 
@@ -21,6 +21,8 @@ For those not in the know a dynamic library is a compiled blob of code that you 
 Enabling both the ability to add new code and to replace implementations.
 They have a symbol table which lets users search for and access procedures and variables once loaded.
 It is this which will allow us to write hot code reload.
+The game code can be compiled into a dynamic library and be loaded by a host program.
+Allowing the programmer to change code then recompile and continue where left off.
 """
 
 proc nbFile(name: string) =
@@ -124,8 +126,11 @@ With that the following is how mapping between types works:
 
 It is also very important to note that since pointers are assumed to be valid after reload the old library must not be unloaded.
 This will leak memory but it also ensures the pointers are still pointing to alive data.
+Doing this will also force all pointer procedures to be reloaded on program reload as migrating pointer procedures is not a fun problem.
+Pointer procedures to named procedures is relative easy to migrate, but any anonymous procedure is mangled in such a way you cannot be certain two procedures with the same name are the same.
+For intuitive hot code reload it is best to avoid pointer procedures and use some sort of global memory or vtable instead, that way it can be reinitialised and the procedures will be updated.
 
-One should also create a list of serializers to store all global variables to the host program.
+To enable saving before reload one should also create a list of serializers to store all global variables to the host program.
 
 ```nim
 # Inside the library
@@ -138,12 +143,12 @@ var someInt = 0
 serializers.add proc() =
   saveInt("someInt", someInt)
 ```
-This can then be called before reload in the host to save state allowing migration
-
+`hcrSave` can then be called before reload on the host to save the state.
+Which means when the next library is loaded it will fetch the memory stored in the host and continue as if nothing happened.
 
 ## Signals
 
-If loaded program crashes one should not have to relaunch the program.
+If a loaded program crashes one should not have to relaunch the program.
 It likely should continue where it left off rerunning the frame.
 To achieve this one can use signal handlers to call a `hcrError` procedure from the host program.
 This `hcrError` will use `siglongjmp` to return the program back to before the loop was called and let the program continue again.
