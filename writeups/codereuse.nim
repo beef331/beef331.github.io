@@ -2,8 +2,12 @@ import nimib
 import std/[tables]
 
 nbInit
-nb.context["path_to_root"] = "../writeups.html"
 nb.darkMode()
+
+nb.context["path_to_root"] = "../writeups.html"
+nb.partials["header_right"] = ""
+nb.context["github_remote_url"] = ""
+nb.context["github_logo"] = ""
 
 nbText"""
 # Nim - Reuse, reuse, and reuse.

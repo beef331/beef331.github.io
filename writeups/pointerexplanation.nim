@@ -1,8 +1,12 @@
 import nimib
-nbInit()
-nb.context["path_to_root"] = "../writeups.html"
-
+nbInit
 nb.darkMode()
+
+nb.context["path_to_root"] = "../writeups.html"
+nb.partials["header_right"] = ""
+nb.context["github_remote_url"] = ""
+nb.context["github_logo"] = ""
+
 nb.title = "Nim - Pointer, confusing scary and over there."
 nbText:"""
 ## Preamble - the planning phase

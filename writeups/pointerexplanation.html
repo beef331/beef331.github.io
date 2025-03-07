@@ -50,7 +50,7 @@ figcaption {
 <div class="nb-box">
   <span><a href="../writeups.html">🏡</a></span>
   <span><code>pointerexplanation.nim</code></span>
-  <span><a href="https://github.com/beef331/beef331.github.io"><svg aria-hidden="true" width="1.2em" height="1.2em" style="vertical-align: middle; fill: #fff" preserveAspectRatio="xMidYMid meet" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg></a></span>
+  <span></span>
 </div>
 <hr>
 </header><main>
@@ -100,7 +100,7 @@ Knowing that <code>addr</code> returns the address of a variable, that sounds li
 
 doThing()
 invoke()</code></pre><pre class="nb-output"> 300
- 140720630441056</pre>
+ 140736965174720</pre>
 <p>The above output is from running with <code>--gc:arc</code>(refc is not deterministic so it may appear as if its working fine) and it shows a very odd issue, we did not mutate <code>a</code> but we got something other than <code>300</code>, how could this be?!</p>
 <h3>Manual Memory Management - Putting the C in Nim</h3>
 <p>If you already know about stack memory vs. heap memory the answer is as clear as transparent aluminium.
@@ -277,7 +277,7 @@ void printFloatArray(float* arr, int len){
   myTestSeq = @[<span class="hljs-number">0</span>f, <span class="hljs-number">2</span>, <span class="hljs-number">3.14159</span>, <span class="hljs-number">3213</span>, <span class="hljs-number">42</span>]
 printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestArr.<span class="hljs-keyword">addr</span>), <span class="hljs-built_in">cint</span> myTestArr.len)
 printFloatArray(<span class="hljs-keyword">cast</span>[<span class="hljs-keyword">ptr</span> <span class="hljs-type">UncheckedArray</span>[<span class="hljs-built_in">float32</span>]](myTestSeq.<span class="hljs-keyword">addr</span>), <span class="hljs-built_in">cint</span> myTestSeq.len)</code></pre><pre class="nb-output">'arr' contains: 1.000000 5.000000 10.321000 
-'arr' contains: 0.000000 0.000000 -69616835663333902271395946632839168.000000 0.000000 0.000000 </pre>
+'arr' contains: 0.000000 0.000000 0.484609 0.000000 0.000000 </pre>
 <p>Odd the array works but the sequence fails.
 This is a similar issue to the one before <code>array</code> is a stack allocated value so its address is the address of the first element whereas <code>seq</code> is a heap allocated value.
 <code>seq</code> being heap allocated is due to the fact its a growable array.
@@ -299,10 +299,14 @@ Since <code>seq</code> is growable if you <code>add</code> to the <code>seq</cod
 </footer>
 <section id="source">
 <pre><code class="nohighlight nim hljs"><span class="hljs-keyword">import</span> nimib
-nbInit()
-nb.context[<span class="hljs-string">&quot;path_to_root&quot;</span>] = <span class="hljs-string">&quot;../writeups.html&quot;</span>
-
+nbInit
 nb.darkMode()
+
+nb.context[<span class="hljs-string">&quot;path_to_root&quot;</span>] = <span class="hljs-string">&quot;../writeups.html&quot;</span>
+nb.partials[<span class="hljs-string">&quot;header_right&quot;</span>] = <span class="hljs-string">&quot;&quot;</span>
+nb.context[<span class="hljs-string">&quot;github_remote_url&quot;</span>] = <span class="hljs-string">&quot;&quot;</span>
+nb.context[<span class="hljs-string">&quot;github_logo&quot;</span>] = <span class="hljs-string">&quot;&quot;</span>
+
 nb.title = <span class="hljs-string">&quot;Nim - Pointer, confusing scary and over there.&quot;</span>
 nbText:<span class="hljs-string">&quot;&quot;&quot;
 ## Preamble - the planning phase
