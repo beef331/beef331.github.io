@@ -8,13 +8,13 @@ nbText:"""
 # It is not hot it is atleast lukewarm
 
 One of the most desirable features of a game development environment is the abillity to change code and see the changes live.
-Vexxing many game developers use a statically typed compiled language to program games making hot code reload require work.
-As someone that went thought the work this documents the journey across the [potato](https://www.github.com/beef331/potato) fields.
+Vexingly many game developers use a statically typed compiled language making hot code reload more difficult.
+As someone that went though the work this documents the journey across the [potato](https://www.github.com/beef331/potato) fields.
 
 ## Dynamic libraries - I swear they just keep moving on me.
 
 For those not in the know a dynamic library is a compiled blob of code that you can load at runtime.
-Enabling both the abillity to add new code and to replace implementations.
+Enabling both the ability to add new code and to replace implementations.
 They have a symbol table which lets users search for and access procedures and variables once loaded.
 It is this which will allow us to write hot code reload.
 """
@@ -72,9 +72,9 @@ This can be expanded to use tagged unions instead to enable storing more complex
 
 ## Serialization
 
-The heart of storing state across reloads is ensuring the old data can be migrated to the new with new fields added.
-In this case it means one will one to use a tagged union across primitives.
-Which means `int`, `float`, `string`, an array type, and finally a structure type.
+The heart of storing state across reloads is ensuring the old data can be migrated to the most recent binary with possible new fields added.
+In this case it means one will use a tagged union across primitive types.
+Meaning we need a single data type that can hold `int`, `float`, `string`, a list, and a structure.
 
 ```nim
 import std/tables
@@ -102,7 +102,7 @@ type
 ```  
 
 
-This data type is sufficient to store every type under the sun (though in the case of Potato `std/json.JsonNode` is just used).
+This data type is sufficient to store every type under the sun (though in the case of Potato Nim's `std/json.JsonNode` is just used).
 To enable support of reference types all data of a structure type should be stored to a root level `HcrObj` where the entry object is at a field named `data`.
 This allows storing references in the top level using their old pointer value as a field name.
 
