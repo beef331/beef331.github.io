@@ -1,4 +1,4 @@
-import std/[dynlib, times, os, tables]
+import std/[dynlib, times, os, tables, tempfiles]
 import system/ansi_c
 
 {.passc: "-rdynamic", passL: "-rdynamic".} ## Needed so we can access symbols from children
@@ -49,6 +49,8 @@ proc hcrQuit() {.exportc, dynlib.} =
 var 
   lastLoad = default Time
   crashed = false
+  lib: LibHandle
+  entry: Entry
 
 while true:
   let thisLoad = 
@@ -60,31 +62,42 @@ while true:
 
   if lastLoad < thisLoad:
     lastLoad = thisLoad
-    var lib =
+    if lib != nil:
+      cast[proc(){.nimcall.}](lib.symAddr("hcrSave"))()
+
+    lib =
       try:
-        loadLib(libPath)
+        let tempLibPath = genTempPath("someLib", ".so") # Move it so we can reload it Operating Systems can be funky
+        copyFile(libPath, tempLibPath)
+        loadLib(tempLibPath, false) # Do load symbols to global table
       except CatchableError as e:
         echo "Failed to load dynamic library: ", e.msg
         continue
 
     if lib == nil:
       echo "Failed to load lib: ", libPath
-    else:
-      let entry = cast[Entry](lib.symAddr("entry"))
-      if entry == nil:
-        echo "No function named 'entry'"
-        if lib != nil:
-          lib.unloadLib()
-        continue
-      case sigsetjmp(jmp, int32.high.cint)
-      of 0:
-        entry()
-      of ErrorJump:
-        crashed = true
-        echo "Crashed"
-      of QuitJump:
-        break
-      else:
-        echo "Incorrect jump"
-      # lib.unloadLib() # We no longer want to free memory we allocated as pointers may outlast the shared library
+      continue
 
+    entry = cast[Entry](lib.symAddr("entry"))
+    if entry == nil:
+      echo "No function named 'entry'"
+      if lib != nil:
+        lib.unloadLib()
+        lib = nil
+        continue
+    echo "Loaded new lib"
+
+  if lib != nil and entry != nil:
+    case sigsetjmp(jmp, int32.high.cint)
+    of 0:
+      entry()
+    of ErrorJump:
+      crashed = true
+      echo "Crashed"
+    of QuitJump:
+      echo "Quit"
+      break
+    else:
+      echo "Incorrect jump"
+
+  sleep(16) # Pretend we're doing work like a game

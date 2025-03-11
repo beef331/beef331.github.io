@@ -2,6 +2,12 @@ import system/ansi_c
 proc hcrError() {.importc, dynlib"".}
 proc hcrQuit() {.importc, dynlib"".}
 
+var serializers: seq[proc()]
+proc hcrSave() {.exportc, dynlib.} =
+  for serializer in serializers:
+    serializer()
+
+
 unhandledExceptionHook = proc(e: ref Exception) {.nimcall, gcsafe, raises: [], tags: [].}=
   try:
     {.cast(tags: []).}:
@@ -59,9 +65,11 @@ var i = 0
 if not getInt("i", i):
   i = 0 # Redundant but let's stay classy 
 
+serializers.add proc() = saveInt("i", i)
+
+
 proc entry() {.exportc, dynlib.} =
   inc i
   echo i
-  saveInt("i", i)
-  if i >= 10:
+  if i >= 10000:
     hcrQuit() # Leave this place

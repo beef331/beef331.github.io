@@ -308,7 +308,7 @@ It likely should continue where it left off rerunning the frame.
 To achieve this one can use signal handlers to call a <code>hcrError</code> procedure from the host program.
 This <code>hcrError</code> will use <code>siglongjmp</code> to return the program back to before the loop was called and let the program continue again.</p>
 <pre>hcr4host.nim</pre>
-<pre><code class="nim hljs">import std/[dynlib, times, os, tables]
+<pre><code class="nim hljs">import std/[dynlib, times, os, tables, tempfiles]
 import system/ansi_c
 
 {.passc: &quot;-rdynamic&quot;, passL: &quot;-rdynamic&quot;.} ## Needed so we can access symbols from children
@@ -359,6 +359,8 @@ proc hcrQuit() {.exportc, dynlib.} =
 var 
   lastLoad = default Time
   crashed = false
+  lib: LibHandle
+  entry: Entry
 
 while true:
   let thisLoad = 
@@ -370,40 +372,57 @@ while true:
 
   if lastLoad &lt; thisLoad:
     lastLoad = thisLoad
-    var lib =
+    if lib != nil:
+      cast[proc(){.nimcall.}](lib.symAddr(&quot;hcrSave&quot;))()
+
+    lib =
       try:
-        loadLib(libPath)
+        let tempLibPath = genTempPath(&quot;someLib&quot;, &quot;.so&quot;) # Move it so we can reload it Operating Systems can be funky
+        copyFile(libPath, tempLibPath)
+        loadLib(tempLibPath, false) # Do load symbols to global table
       except CatchableError as e:
         echo &quot;Failed to load dynamic library: &quot;, e.msg
         continue
 
     if lib == nil:
       echo &quot;Failed to load lib: &quot;, libPath
-    else:
-      let entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
-      if entry == nil:
-        echo &quot;No function named 'entry'&quot;
-        if lib != nil:
-          lib.unloadLib()
-        continue
-      case sigsetjmp(jmp, int32.high.cint)
-      of 0:
-        entry()
-      of ErrorJump:
-        crashed = true
-        echo &quot;Crashed&quot;
-      of QuitJump:
-        break
-      else:
-        echo &quot;Incorrect jump&quot;
-      # lib.unloadLib() # We no longer want to free memory we allocated as pointers may outlast the shared library
+      continue
 
+    entry = cast[Entry](lib.symAddr(&quot;entry&quot;))
+    if entry == nil:
+      echo &quot;No function named 'entry'&quot;
+      if lib != nil:
+        lib.unloadLib()
+        lib = nil
+        continue
+    echo &quot;Loaded new lib&quot;
+
+  if lib != nil and entry != nil:
+    case sigsetjmp(jmp, int32.high.cint)
+    of 0:
+      entry()
+    of ErrorJump:
+      crashed = true
+      echo &quot;Crashed&quot;
+    of QuitJump:
+      echo &quot;Quit&quot;
+      break
+    else:
+      echo &quot;Incorrect jump&quot;
+
+  sleep(16) # Pretend we're doing work like a game
 </code></pre>
 
 <pre>hcr4lib.nim</pre>
 <pre><code class="nim hljs">import system/ansi_c
 proc hcrError() {.importc, dynlib&quot;&quot;.}
 proc hcrQuit() {.importc, dynlib&quot;&quot;.}
+
+var serializers: seq[proc()]
+proc hcrSave() {.exportc, dynlib.} =
+  for serializer in serializers:
+    serializer()
+
 
 unhandledExceptionHook = proc(e: ref Exception) {.nimcall, gcsafe, raises: [], tags: [].}=
   try:
@@ -462,11 +481,13 @@ var i = 0
 if not getInt(&quot;i&quot;, i):
   i = 0 # Redundant but let's stay classy 
 
+serializers.add proc() = saveInt(&quot;i&quot;, i)
+
+
 proc entry() {.exportc, dynlib.} =
   inc i
   echo i
-  saveInt(&quot;i&quot;, i)
-  if i &gt;= 10:
+  if i &gt;= 10000:
     hcrQuit() # Leave this place
 </code></pre>
 
