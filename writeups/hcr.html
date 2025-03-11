@@ -307,6 +307,9 @@ Which means when the next library is loaded it will fetch the memory stored in t
 It likely should continue where it left off rerunning the frame.
 To achieve this one can use signal handlers to call a <code>hcrError</code> procedure from the host program.
 This <code>hcrError</code> will use <code>siglongjmp</code> to return the program back to before the loop was called and let the program continue again.</p>
+<h2>The rest of the Tyto</h2>
+<p>Finally with all that work the following is practically what one will see when they build the system following this writeup.
+Though of course expansion for serializers using the <code>HcrObj</code> should be done.</p>
 <pre>hcr4host.nim</pre>
 <pre><code class="nim hljs">import std/[dynlib, times, os, tables, tempfiles]
 import system/ansi_c
@@ -670,7 +673,14 @@ It likely should continue where it left off rerunning the frame.
 To achieve this one can use signal handlers to call a `hcrError` procedure from the host program.
 This `hcrError` will use `siglongjmp` to return the program back to before the loop was called and let the program continue again.
 
+## The rest of the Tyto
+
+Finally with all that work the following is practically what one will see when they build the system following this writeup.
+Though of course expansion for serializers using the `HcrObj` should be done.
 &quot;&quot;&quot;</span>
+
+
+
 
 nbFile(<span class="hljs-string">&quot;hcr4host.nim&quot;</span>)
 nbFile(<span class="hljs-string">&quot;hcr4lib.nim&quot;</span>)

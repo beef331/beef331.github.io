@@ -153,7 +153,14 @@ It likely should continue where it left off rerunning the frame.
 To achieve this one can use signal handlers to call a `hcrError` procedure from the host program.
 This `hcrError` will use `siglongjmp` to return the program back to before the loop was called and let the program continue again.
 
+## The rest of the Tyto
+
+Finally with all that work the following is practically what one will see when they build the system following this writeup.
+Though of course expansion for serializers using the `HcrObj` should be done.
 """
+
+
+
 
 nbFile("hcr4host.nim")
 nbFile("hcr4lib.nim")
