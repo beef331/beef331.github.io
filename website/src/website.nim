@@ -115,7 +115,7 @@ All without forcing the end project build with reload support.
 const
   footerEntries = [
     FooterEntry(
-      url: "mailto://me@jasonbeetham.com",
+      url: "mailto://me@jasonbeetham.ca",
       icon: "fas fa-envelope-open"
     ),
     FooterEntry(
